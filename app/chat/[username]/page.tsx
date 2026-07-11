@@ -17,31 +17,58 @@ export default function ChatPage() {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   // Load ujumbe kutoka Supabase
+  const fetchMessages = async () => {
+    const { data, error } = await supabase
+   .from('messages')
+   .select('*')
+   .eq('user_id', username)
+   .order('created_at', { ascending: true });
+
+    if (error) console.error(error);
+    if (data) setMessages(data);
+  };
+
   useEffect(() => {
-    const fetchMessages = async () => {
-      const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('user_id', username) // Tunatumia username kama user_id
-      .order('created_at', { ascending: true });
-      if (data) setMessages(data);
-    };
     fetchMessages();
   }, [username]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
-    const userMsg = { user_id: username, ai_name: 'NICK', role: 'user', content: input };
-    setMessages(prev => [...prev, {...userMsg, id: Date.now().toString(), created_at: new Date().toISOString() }]);
+    if (!input.trim() || loading) return;
+
+    const userContent = input;
     setInput('');
     setLoading(true);
 
-    await supabase.from('messages').insert(userMsg);
-    const aiResponse = await askAI(input, 'NICK');
-    const aiMsg = { user_id: username, ai_name: 'NICK', role: 'ai', content: aiResponse };
-    await supabase.from('messages').insert(aiMsg);
-    
-    setMessages(prev => [...prev, {...aiMsg, id: Date.now().toString() + 'ai', created_at: new Date().toISOString() }]);
+    // 1. Hifadhi ujumbe wa user
+    const { error: userError } = await supabase.from('messages').insert({
+      user_id: username,
+      ai_name: 'NICK',
+      role: 'user',
+      content: userContent
+    });
+
+    if (userError) {
+      console.error(userError);
+      setLoading(false);
+      return;
+    }
+
+    await fetchMessages(); // Pata ujumbe mpya na id halisi
+
+    // 2. Pata jibu la AI
+    const aiResponse = await askAI(userContent, 'NICK');
+
+    // 3. Hifadhi jibu la AI
+    const { error: aiError } = await supabase.from('messages').insert({
+      user_id: username,
+      ai_name: 'NICK',
+      role: 'ai',
+      content: aiResponse
+    });
+
+    if (aiError) console.error(aiError);
+
+    await fetchMessages(); // Sasisha tena
     setLoading(false);
   };
 
@@ -52,6 +79,7 @@ export default function ChatPage() {
         <h2 className="font-bold text-lg">{username}</h2>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.length === 0 &&!loading && <p className="text-center text-gray-400 mt-10">Anza mazungumzo na NICK AI 👋</p>}
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === 'user'? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[75%] p-3 rounded-2xl ${msg.role === 'user'? 'bg-blue-500 text-white rounded-br-none' : 'bg-white shadow rounded-bl-none'}`}>
