@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
 import { askAI } from '@/lib/aiClient';
 
 type Message = {
@@ -20,6 +19,8 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const storageKey = `chat_${username}`; // Kila username ana storage yake
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -28,59 +29,44 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Load old messages
+  // Load ujumbe wa huyu username tu
   useEffect(() => {
-    const fetchMessages = async () => {
-      const { data: { user } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/');
-        return;
-      }
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      setMessages(JSON.parse(saved));
+    }
+  }, [storageKey]);
 
-      const { data } = await supabase
-       .from('messages')
-       .select('*')
-       .eq('user_id', user.id)
-       .eq('ai_name', username)
-       .order('created_at', { ascending: true });
-
-      if (data) setMessages(data);
-    };
-    fetchMessages();
-  }, [username, router]);
+  // Hifadhi kila ujumbe mpya
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(messages));
+  }, [messages, storageKey]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const userMessage = { role: 'user' as const, content: input };
-    setMessages(prev => [...prev, {...userMessage, id: Date.now().toString(), created_at: new Date().toISOString() }]);
+    const userMessage: Message = { 
+      id: Date.now().toString(), 
+      role: 'user', 
+      content: input, 
+      created_at: new Date().toISOString() 
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
-    // Save user message to DB
-    await supabase.from('messages').insert({
-      user_id: user.id,
-      ai_name: username,
-      role: 'user',
-      content: input
-    });
-
-    // Get AI response
+    // Pata jibu la AI
     const aiResponse = await askAI(input, username as string);
 
-    // Save AI message to DB
-    await supabase.from('messages').insert({
-      user_id: user.id,
-      ai_name: username,
-      role: 'ai',
-      content: aiResponse
-    });
+    const aiMessage: Message = { 
+      id: Date.now().toString() + 'ai', 
+      role: 'ai', 
+      content: aiResponse, 
+      created_at: new Date().toISOString() 
+    };
 
-    setMessages(prev => [...prev, {...userMessage, id: Date.now().toString() + 'ai', created_at: new Date().toISOString() }]);
-    setMessages(prev => [...prev, { id: Date.now().toString() + 'ai2', role: 'ai', content: aiResponse, created_at: new Date().toISOString() }]);
+    setMessages(prev => [...prev, aiMessage]);
     setLoading(false);
   };
 
@@ -88,18 +74,21 @@ export default function ChatPage() {
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-md p-4 flex items-center gap-3">
-        <button onClick={() => router.push('/')} className="text-blue-500">←</button>
+        <button onClick={() => router.push('/')} className="text-blue-500 text-xl">←</button>
         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
           {username?.charAt(0).toUpperCase()}
         </div>
         <div>
-          <h2 className="font-bold text-lg">NICK AI - {username}</h2>
-          <p className="text-xs text-green-500">Online</p>
+          <h2 className="font-bold text-lg">{username}</h2>
+          <p className="text-xs text-green-500">Anaongea na NICK AI</p>
         </div>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.length === 0 && (
+          <p className="text-center text-gray-400 mt-10">Anza mazungumzo na NICK AI 👋</p>
+        )}
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === 'user'? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[75%] p-3 rounded-2xl ${
