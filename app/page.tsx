@@ -3,79 +3,93 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
-type ChatContact = {
-  name: string;
-  lastMessage: string;
-  time: string;
-}
+type ChatContact = { name: string; lastMessage: string; time: string }
 
 export default function Home() {
   const [search, setSearch] = useState('');
   const [chatList, setChatList] = useState<ChatContact[]>([]);
-  const [allUsers, setAllUsers] = useState<string[]>([]); // Watu wengine kwenye app
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [myName, setMyName] = useState<string | null>(null);
 
-  const loadData = async () => {
+  useEffect(() => {
+    const name = localStorage.getItem('my_username');
+    if(!name) {
+      router.push('/login'); // Kama huna account nenda login
+    } else {
+      setMyName(name);
+      // Jisajili kwenye directory ya Supabase mara 1 tu
+      supabase.from('users').upsert({ username: name, last_seen: new Date() });
+      loadChats();
+    }
+  }, [router]);
+
+  const loadChats = () => {
     const contacts: ChatContact[] = [];
-    // 1. NICK AI daima yupo kwanza
-    contacts.push({
-      name: 'NICK AI',
-      lastMessage: 'Rafiki yako wa AI - Bonyeza kuongea',
-      time: ''
-    });
+    contacts.push({ name: 'NICK AI', lastMessage: 'Rafiki yako wa AI', time: '' });
 
-    // 2. Pata chat zote kutoka localStorage
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key?.startsWith('chat_')) {
         const username = key.replace('chat_', '');
-        if (username !== 'NICK AI') {
+        if (username!== 'NICK AI') {
           const messages = JSON.parse(localStorage.getItem(key) || '[]');
           const lastMsg = messages[messages.length - 1];
           contacts.push({
             name: username,
-            lastMessage: lastMsg ? lastMsg.content.substring(0, 30) + '...' : 'Anza mazungumzo',
-            time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString('sw-TZ', {hour: '2-digit', minute:'2-digit'}) : ''
+            lastMessage: lastMsg? lastMsg.content.substring(0, 30) + '...' : 'Anza mazungumzo',
+            time: lastMsg? new Date(lastMsg.created_at).toLocaleTimeString('sw-TZ', {hour: '2-digit', minute:'2-digit'}) : ''
           });
         }
       }
     }
     setChatList(contacts);
-
-    // 3. Pata watu wote kutoka Supabase
-    const { data } = await supabase.from('users').select('username');
-    if (data) setAllUsers(data.map(u => u.username));
   }
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const handleSearch = async () => {
+    if (!search.trim() ||!myName) return;
+    setError('');
+    setLoading(true);
 
-  const startChat = async (name: string) => {
-    if (!name.trim()) return;
-    
-    // Jisajili wewe mwenyewe kwenye directory
-    const myName = localStorage.getItem('my_username') || 'Wewe'; 
-    await supabase.from('users').upsert({ username: myName, last_seen: new Date() });
-    await supabase.from('users').upsert({ username: name.trim(), last_seen: new Date() });
+    const usernameToAdd = search.trim();
 
-    router.push(`/chat/${name.trim()}`);
-  };
+    // 1. Huwezi kujiongeza mwenyewe
+    if(usernameToAdd === myName) {
+      setError("Huwawezi kujiongeza mwenyewe 😅");
+      setLoading(false);
+      return;
+    }
 
-  const handleSearch = () => {
-    if (!search.trim()) return;
-    startChat(search);
+    // 2. Angalia kama huyo user yupo kwenye Supabase
+    const { data, error: supaError } = await supabase
+     .from('users')
+     .select('username')
+     .eq('username', usernameToAdd)
+     .single();
+
+    if(data) {
+      // 3. Kama yupo, muongeze kwenye list yako
+      const key = `chat_${usernameToAdd}`;
+      if(!localStorage.getItem(key)) {
+        localStorage.setItem(key, '[]'); // Tengeneza chat tupu
+      }
+      loadChats(); // Reload list
+      router.push(`/chat/${usernameToAdd}`);
+    } else {
+      // 4. Kama hayupo, toa error kama WhatsApp
+      setError(`@${usernameToAdd} hayupo kwenye Mychatapp.`);
+    }
+    setLoading(false);
     setSearch('');
   };
-
-  // Watu ambao haujaongea nao bado
-  const otherUsers = allUsers.filter(u => !chatList.find(c => c.name === u) && u !== 'NICK AI');
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Header */}
       <div className="bg-blue-500 text-white p-4 shadow-md">
         <h1 className="text-2xl font-bold">Mychatapp</h1>
+        <p className="text-sm opacity-80">Umeingia kama: @{myName}</p>
       </div>
 
       {/* Search Bar */}
@@ -86,29 +100,31 @@ export default function Home() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Tafuta au andika jina jipya..."
+            placeholder="Andika @username kuongeza mtu..."
             className="flex-1 p-3 border rounded-full outline-none"
           />
-          <button 
+          <button
             onClick={handleSearch}
-            className="bg-blue-500 text-white px-5 rounded-full font-bold"
+            disabled={loading}
+            className="bg-blue-500 text-white px-5 rounded-full font-bold disabled:bg-gray-400"
           >
-            +
+            {loading? '...' : '+'}
           </button>
         </div>
+        {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
       </div>
 
-      {/* List ya Chats zako */}
+      {/* List ya Chats zako TU */}
       <div className="flex-1 overflow-y-auto">
-        <p className="text-gray-500 text-xs px-4 pt-3 pb-1">Mazungumzo</p>
+        <p className="text-gray-500 text-xs px-4 pt-3 pb-1">Mazungumzo Yako</p>
         {chatList.map(contact => (
-          <div 
+          <div
             key={contact.name}
-            onClick={() => startChat(contact.name)}
+            onClick={() => router.push(`/chat/${contact.name}`)}
             className="flex items-center gap-3 p-4 bg-white border-b hover:bg-gray-50 cursor-pointer"
           >
             <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-              {contact.name === 'NICK AI' ? <span className="text-2xl">🤖</span> : <span className="font-bold text-white text-lg">{contact.name.charAt(0).toUpperCase()}</span>}
+              {contact.name === 'NICK AI'? <span className="text-2xl">🤖</span> : <span className="font-bold text-white text-lg">{contact.name.charAt(0).toUpperCase()}</span>}
             </div>
             <div className="flex-1 overflow-hidden">
               <div className="flex justify-between">
@@ -119,25 +135,6 @@ export default function Home() {
             </div>
           </div>
         ))}
-
-        {/* Sehemu Mpya: Watu kwenye App */}
-        {otherUsers.length > 0 && (
-          <>
-            <p className="text-gray-500 text-xs px-4 pt-4 pb-1">Watu kwenye App</p>
-            {otherUsers.map(name => (
-              <div 
-                key={name}
-                onClick={() => startChat(name)}
-                className="flex items-center gap-3 p-4 bg-white border-b hover:bg-gray-50 cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-                  <span className="font-bold text-gray-600 text-lg">{name.charAt(0).toUpperCase()}</span>
-                </div>
-                <p className="font-bold">{name}</p>
-              </div>
-            ))}
-          </>
-        )}
       </div>
     </div>
   );
