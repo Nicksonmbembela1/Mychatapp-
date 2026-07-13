@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabaseClient'; // HAPA NDIO NIMEBADILI
+import { supabase } from '@/lib/supabaseClient'; // HAPA NDIO NIMEBADILI
 
 type ChatContact = { name: string; lastMessage: string; time: string }
 
