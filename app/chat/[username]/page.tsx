@@ -1,92 +1,106 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { askAI } from '@/lib/aiClient';
 
-type Message = { id: string; role: 'user' | 'ai'; content: string; created_at: string; };
+type Message = { content: string; sender: 'me' | 'them'; created_at: string }
 
 export default function ChatPage() {
-  const { username } = useParams();
+  const { username } = useParams(); // Inachukua jina kutoka kwenye link /chat/NICK
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
+  const [myName, setMyName] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const storageKey = `chat_${username}`;
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  const chatKey = `chat_${username}`;
 
-  // Load kutoka LocalStorage + Weka jina lako mara ya kwanza
+  // 1. PAKIA MAZUNGUMZO
   useEffect(() => {
-    // 1. Weka jina lako kama bado halipo
-    if(!localStorage.getItem('my_username')) {
-      const myName = prompt("Karibu Mychatapp! Weka jina lako:") || "Mimi";
-      localStorage.setItem('my_username', myName);
-    }
-    
-    // 2. Load chat
-    const saved = localStorage.getItem(storageKey);
-    if (saved) setMessages(JSON.parse(saved));
-  }, [storageKey]);
-
-  // Save kila ujumbe ukiingia
-  useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(messages));
-  }, [messages, storageKey]);
-
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-    const userMsg = { id: Date.now().toString(), role: 'user', content: input, created_at: new Date().toISOString() };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput('');
-    
-    // Kama ni NICK AI tu ndio anajibu
-    if (username === 'NICK AI') {
-      setLoading(true);
-      const aiResponse = await askAI(input, 'NICK');
-      const aiMsg = { id: Date.now().toString() + 'ai', role: 'ai', content: aiResponse, created_at: new Date().toISOString() };
-      setMessages(prev => [...prev, aiMsg]);
-      setLoading(false);
+    const name = localStorage.getItem('my_username');
+    if(!name) {
+      router.push('/login'); // Kama huna account rudi login
     } else {
-      // Kama ni mtu mwingine, hapa baadaye tutaunganisha realtime
-      // Kwa sasa tuache tu ujumbe upo
+      setMyName(name);
+      const savedMessages = localStorage.getItem(chatKey);
+      if(savedMessages) {
+        setMessages(JSON.parse(savedMessages));
+      }
     }
+  }, [chatKey, router]);
+
+  // 2. SCROLL CHINI KIOTOMATIKI
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // 3. TUMA UJUMBE
+  const sendMessage = () => {
+    if(!newMessage.trim()) return;
+
+    const message: Message = {
+      content: newMessage,
+      sender: 'me',
+      created_at: new Date().toISOString()
+    };
+
+    const updatedMessages = [...messages, message];
+    setMessages(updatedMessages);
+    localStorage.setItem(chatKey, JSON.stringify(updatedMessages)); // Hifadhi kwenye simu yako tu
+    setNewMessage('');
   };
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
-      <div className="bg-blue-500 text-white p-4 flex items-center gap-3">
-        <button onClick={() => router.back()} className="text-2xl">←</button>
-        <h1 className="font-bold text-lg">{username}</h1>
+      {/* HEADER */}
+      <div className="bg-blue-500 text-white p-4 flex items-center gap-3 shadow-md">
+        <button onClick={() => router.push('/')} className="text-2xl font-bold">←</button>
+        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+          {username === 'NICK AI'? <span className="text-2xl">🤖</span> : <span className="font-bold text-blue-500 text-lg">{String(username).charAt(0).toUpperCase()}</span>}
+        </div>
+        <div>
+          <h1 className="font-bold text-lg">{username}</h1>
+          <p className="text-xs opacity-80">online</p>
+        </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {messages.map(msg => (
-          <div key={msg.id} className={`flex mb-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`p-3 rounded-2xl max-w-[75%] ${msg.role === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-white text-black rounded-bl-none shadow'}`}>
-              {msg.content}
+      {/* SEHEMU YA MAZUNGUMZO */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        {messages.length === 0 && (
+          <p className="text-center text-gray-400 mt-10">Anza mazungumzo na @{username}</p>
+        )}
+        {messages.map((msg, index) => (
+          <div key={index} className={`flex ${msg.sender === 'me'? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[70%] p-3 rounded-2xl ${
+              msg.sender === 'me'? 'bg-blue-500 text-white rounded-br-none' : 'bg-white text-black rounded-bl-none shadow-sm'
+            }`}>
+              <p>{msg.content}</p>
+              <p className={`text-xs mt-1 ${msg.sender === 'me'? 'text-blue-200' : 'text-gray-400'} text-right`}>
+                {new Date(msg.created_at).toLocaleTimeString('sw-TZ', {hour: '2-digit', minute:'2-digit'})}
+              </p>
             </div>
           </div>
         ))}
-        {loading && <p className="text-gray-500 text-sm">NICK AI anaandika...</p>}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} /> {/* Hii inatusaidia kuscroll chini */}
       </div>
 
-      {/* Input */}
-      <div className="p-3 bg-white border-t flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="Andika ujumbe..."
-          className="flex-1 p-3 border rounded-full outline-none"
-        />
-        <button onClick={sendMessage} className="bg-blue-500 text-white px-5 rounded-full font-bold">
-          Tuma
-        </button>
+      {/* SEHEMU YA KUANDIKA */}
+      <div className="p-3 bg-white border-t">
+        <div className="flex gap-2">
+          <input 
+            type="text" 
+            value={newMessage} 
+            onChange={(e) => setNewMessage(e.target.value)} 
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            placeholder={`Andika ujumbe kwa ${username}...`} 
+            className="flex-1 p-3 border rounded-full outline-none bg-gray-100"
+          />
+          <button 
+            onClick={sendMessage} 
+            className="bg-blue-500 text-white w-12 h-12 rounded-full font-bold flex items-center justify-center"
+          >
+            ➤
+          </button>
+        </div>
       </div>
     </div>
   );
