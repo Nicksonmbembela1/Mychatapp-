@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient'; // HAPA NDIO NIMEBADILI
+import { supabase } from '../lib/supabaseClient' // <-- HAPA NDO NIMEFIX. SIO @/
 
 type ChatContact = { name: string; lastMessage: string; time: string }
 
@@ -17,7 +17,7 @@ export default function Home() {
   useEffect(() => {
     const name = localStorage.getItem('my_username');
     if(!name) {
-      router.push('/login'); // 1. KAMA HAIPO NENDA LOGIN
+      router.push('/login');
     } else {
       setMyName(name);
       supabase.from('users').upsert({ username: name, last_seen: new Date() });
@@ -57,7 +57,7 @@ export default function Home() {
     if (!search.trim() ||!myName) return;
     setError('');
     setLoading(true);
-    const usernameToAdd = search.trim().toLowerCase(); // 2. TUNAFANYA NI NDOGO ZOTE
+    const usernameToAdd = search.trim().toLowerCase();
 
     if(usernameToAdd === myName) {
       setError("Huwawezi kujiongeza mwenyewe 😅");
@@ -87,20 +87,20 @@ export default function Home() {
     setSearch('');
   };
 
-  const handleLogout = () => { // 3. FUNCTION MPYA YA KUTOKA
+  const handleLogout = () => {
     localStorage.removeItem('my_username');
     router.push('/login');
   }
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      <div className="bg-blue-500 text-white p-4 shadow-md flex justify-between items-center"> {/* 4. IMEONGWA FLEX */}
+      <div className="bg-blue-500 text-white p-4 shadow-md flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Mychatapp</h1>
           <p className="text-sm opacity-80">@{myName} • Watumiaji: {totalUsers}</p>
         </div>
         <button onClick={handleLogout} className="text-sm bg-white/20 px-3 py-1 rounded-full hover:bg-white/30">
-          Toka {/* 4. BUTTON YA LOGOUT */}
+          Toka
         </button>
       </div>
 
