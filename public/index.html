@@ -21,18 +21,31 @@
     <!-- SCREEN 2: LIST YA CHATS -->
     <div id="chatListScreen" class="screen hidden">
       <div class="header">
+        <img id="myAvatar" src="https://i.pravatar.cc/40" class="avatar" onclick="showProfile()">
         <h2>Mychatapp</h2>
         <div>
           <button onclick="showSearch()">🔍</button>
           <button onclick="showCreateGroup()">👥+</button>
         </div>
       </div>
-      <div id="chatList">
-        <!-- NICK AI na chats nyingine zitawekwa hapa na JS -->
+      <div id="chatList"></div>
+    </div>
+
+    <!-- SCREEN 3: PROFILE YANGU MPYA -->
+    <div id="profileScreen" class="screen hidden">
+      <div class="header">
+        <button onclick="backToList()"><-</button>
+        <h2>Profile Yangu</h2>
+      </div>
+      <div class="profileBox">
+        <img id="profilePreview" src="https://i.pravatar.cc/150" class="bigAvatar">
+        <label for="profileInput" class="uploadBtn">Badilisha Picha</label>
+        <input type="file" id="profileInput" accept="image/*" onchange="updateProfilePic(event)">
+        <h3 id="profileName"></h3>
       </div>
     </div>
 
-    <!-- SCREEN 3: SEARCH USER -->
+    <!-- SCREEN 4: SEARCH USER -->
     <div id="searchScreen" class="screen hidden">
       <div class="header">
         <button onclick="backToList()"><-</button>
@@ -43,7 +56,7 @@
       <div id="searchResults"></div>
     </div>
 
-    <!-- SCREEN 4: KUUNDA GROUP -->
+    <!-- SCREEN 5: KUUNDA GROUP -->
     <div id="groupScreen" class="screen hidden">
       <div class="header">
         <button onclick="backToList()"><-</button>
@@ -54,10 +67,11 @@
       <button onclick="createGroup()">Unda Group</button>
     </div>
 
-    <!-- SCREEN 5: WINDOW YA CHAT -->
+    <!-- SCREEN 6: WINDOW YA CHAT -->
     <div id="chatScreen" class="screen hidden">
       <div class="header">
         <button onclick="backToList()"><-</button>
+        <img id="chatAvatar" src="https://i.pravatar.cc/40" class="avatar">
         <h2 id="chatWith">NICK AI</h2>
       </div>
       <div id="messages"></div>
