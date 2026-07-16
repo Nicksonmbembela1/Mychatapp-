@@ -5,8 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mychatapp</title>
 
-  <!-- 1. ONGEZA HII: ICON YA TAB YA MYCHATAPP -->
+  <!-- 1. ICON YA TAB -->
   <link rel="icon" type="image/png" href="icon.png">
+
+  <!-- 2. ONGEZA HII MIPYA 3 YA PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#00ff88">
+  <meta name="apple-mobile-web-app-capable" content="yes">
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -35,7 +40,7 @@
       <div id="chatList"></div>
     </div>
 
-    <!-- SCREEN 3: PROFILE YANGU MPYA -->
+    <!-- SCREEN 3: PROFILE YANGU -->
     <div id="profileScreen" class="screen hidden">
       <div class="header">
         <button onclick="backToList()"><-</button>
