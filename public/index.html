@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mychatapp</title>
 
-  <!-- 1. ICON YA TAB -->
   <link rel="icon" type="image/png" href="icon.png">
-
-  <!-- 2. ONGEZA HII MIPYA 3 YA PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#00ff88">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -43,7 +40,7 @@
     <!-- SCREEN 3: PROFILE YANGU -->
     <div id="profileScreen" class="screen hidden">
       <div class="header">
-        <button onclick="backToList()"><-</button>
+        <button onclick="backToList()" class="backBtn">⬅</button>
         <h2>Profile Yangu</h2>
       </div>
       <div class="profileBox">
@@ -57,7 +54,7 @@
     <!-- SCREEN 4: SEARCH USER -->
     <div id="searchScreen" class="screen hidden">
       <div class="header">
-        <button onclick="backToList()"><-</button>
+        <button onclick="backToList()" class="backBtn">⬅</button>
         <h2>Tafuta User</h2>
       </div>
       <input type="text" id="searchInput" placeholder="Andika username...">
@@ -68,7 +65,7 @@
     <!-- SCREEN 5: KUUNDA GROUP -->
     <div id="groupScreen" class="screen hidden">
       <div class="header">
-        <button onclick="backToList()"><-</button>
+        <button onclick="backToList()" class="backBtn">⬅</button>
         <h2>Unda Group</h2>
       </div>
       <input type="text" id="groupName" placeholder="Jina la Group">
@@ -78,8 +75,8 @@
 
     <!-- SCREEN 6: WINDOW YA CHAT -->
     <div id="chatScreen" class="screen hidden">
-      <div class="header">
-        <button onclick="backToList()"><-</button>
+      <div class="header chatHeader">
+        <button onclick="backToList()" class="backBtn">⬅</button>
         <img id="chatAvatar" src="https://i.pravatar.cc/40" class="avatar">
         <h2 id="chatWith">NICK AI</h2>
       </div>
