@@ -187,8 +187,17 @@ function loadMessages(){
     let isMe = m.from === currentUser;
     return `<div class="msg ${isMe? 'me' : ''}">
       ${m.text}
-      <div class="msgMeta">${m.time} ${isMe? '<span class="tick">✓✓</span>' : ''}</div>
+      <div class="msgMeta">${m.time} ${isMe? '<span class="tick">✓</span>' : ''}</div>
     </div>`
   }).join('');
   document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+}
+
+// ========= ONGEZA HII CHINI KABISA: SAJILI SERVICE WORKER =========
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+     .then(reg => console.log('Service Worker: Imefanikiwa ✅'))
+     .catch(err => console.log('Service Worker: Imefeli ❌', err));
+  });
 }
