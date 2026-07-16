@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8">
+  <title>Mychatapp</title>
+  <style>
+    body { font-family: Arial; background: #0b141a; color: white; padding: 10px; }
+    #chatBox { background: #111b21; height: 70vh; overflow-y: auto; padding: 10px; border-radius: 10px; }
+    .msg { background: #202c33; padding: 8px; border-radius: 8px; margin: 5px 0; }
+    input, button { padding: 12px; border-radius: 8px; border: none; }
+    button { background: #25D366; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Mychatapp 💬</h1>
+  <div id="chatBox">Inapakia...</div>
+  <input id="msg" placeholder="Andika ujumbe">
+  <button onclick="sendMsg()">Tuma</button>
+
+  <script>
+    // Sasa tunamuomba SERVER wetu, sio Supabase direct
+    async function loadMessages() {
+      const res = await fetch('/api/messages')
+      const data = await res.json()
+      const box = document.getElementById('chatBox')
+      box.innerHTML = ''
+      data.forEach(m => {
+        box.innerHTML += `<div class="msg"><b>User:</b> ${m.text}</div>`
+      })
+    }
+
+    async function sendMsg() {
+      const msgInput = document.getElementById('msg')
+      const msg = msgInput.value
+      if(!msg) return;
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({text: msg})
+      })
+      msgInput.value = ''
+      loadMessages() // pakia upya
+    }
+
+    // Pakia meseji kila sekunde 3
+    setInterval(loadMessages, 3000)
+    loadMessages()
+  </script>
+</body>
+</html>
