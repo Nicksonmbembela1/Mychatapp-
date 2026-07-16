@@ -1,10 +1,11 @@
-const CACHE_NAME = 'mychatapp-v1';
+const CACHE_NAME = 'mychatapp-v2'; // nimebadilisha v1 -> v2
 const urlsToCache = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
   '/icon.png',
+  '/nick-logo.png', // ONGEZA HII ILI LOGO YA NICK IFUNGUKE OFFLINE
   '/manifest.json'
 ];
 
@@ -13,6 +14,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
+        console.log('Files zimehifadhiwa kwenye cache');
         return cache.addAll(urlsToCache);
       })
   );
