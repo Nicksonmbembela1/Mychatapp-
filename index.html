@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8">
+  <title>Mychatapp</title>
+  <style>
+    body { font-family: Arial; background: #0b141a; color: white; padding: 10px; }
+    #chatBox { background: #111b21; height: 70vh; overflow-y: auto; padding: 10px; border-radius: 10px; }
+    .msg { background: #202c33; padding: 8px; border-radius: 8px; margin: 5px 0; }
+    input, button { padding: 12px; border-radius: 8px; border: none; }
+    button { background: #25D366; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Mychatapp 💬</h1>
+  <div id="chatBox">Inapakia...</div>
+  <input id="msg" placeholder="Andika ujumbe">
+  <button onclick="sendMsg()">Tuma</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Render itabadilisha hizi automatically
+    const SUPABASE_URL = '{{SUPABASE_URL}}'
+    const SUPABASE_KEY = '{{SUPABASE_KEY}}'
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+    async function loadMessages() {
+      const { data } = await supabase.from('messages').select('*').order('created_at')
+      const box = document.getElementById('chatBox')
+      box.innerHTML = ''
+      data.forEach(m => {
+        box.innerHTML += `<div class="msg"><b>User:</b> ${m.text || m.message}</div>`
+      })
+    }
+
+    async function sendMsg() {
+      const msg = document.getElementById('msg').value
+      await supabase.from('messages').insert([{ text: msg }])
+      document.getElementById('msg').value = ''
+    }
+
+    supabase.channel('msgs').on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'messages'}, 
+      payload => { loadMessages() }).subscribe()
+
+    loadMessages()
+  </script>
+</body>
+</html>
