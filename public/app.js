@@ -7,8 +7,41 @@ window.onload = () => {
   let savedUser = localStorage.getItem('currentUser');
   if(savedUser){
     currentUser = savedUser;
+    loadMyProfile(); // PAKIA PICHA YAKO
     showChatList();
   }
+}
+
+// PATA PICHA YA MTU. KAMA HANA TUMIA DEFAULT
+function getAvatar(name){
+  let profiles = JSON.parse(localStorage.getItem('profiles')) || {};
+  return profiles[name] || `https://i.pravatar.cc/150?u=${name}`;
+}
+
+// PAKIA PICHA YAKO KILA MAHALI
+function loadMyProfile(){
+  document.getElementById('myAvatar').src = getAvatar(currentUser);
+  document.getElementById('profileName').innerText = currentUser;
+  document.getElementById('profilePreview').src = getAvatar(currentUser);
+}
+
+// ONYESHA PROFILE SCREEN
+function showProfile(){ hideAll(); document.getElementById('profileScreen').classList.remove('hidden'); }
+
+// BADILISHA PICHA
+function updateProfilePic(event){
+  let file = event.target.files[0];
+  if(!file) return;
+  let reader = new FileReader();
+  reader.onload = function(e){
+    let profiles = JSON.parse(localStorage.getItem('profiles')) || {};
+    profiles[currentUser] = e.target.result; // tunahifadhi kama base64
+    localStorage.setItem('profiles', JSON.stringify(profiles));
+    loadMyProfile();
+    showChatList(); // Refresh list ili picha ibadilike
+    alert("Picha imebadilika");
+  }
+  reader.readAsDataURL(file);
 }
 
 // 1. REGISTER
@@ -31,10 +64,11 @@ function login(){
   let pass = document.getElementById('password').value;
   let users = JSON.parse(localStorage.getItem('users')) || [];
   let found = users.find(u => u.user === user && u.pass === pass);
-  
+
   if(found){
     currentUser = user;
     localStorage.setItem('currentUser', user);
+    loadMyProfile();
     showChatList();
   } else {
     alert("Username au password si sahihi");
@@ -45,15 +79,18 @@ function login(){
 function showChatList(){
   hideAll();
   document.getElementById('chatListScreen').classList.remove('hidden');
-  
+
   let chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
   if(!chats.includes("NICK AI")){
     chats.unshift("NICK AI");
     localStorage.setItem('chats_' + currentUser, JSON.stringify(chats));
   }
-  
-  document.getElementById('chatList').innerHTML = chats.map(c => 
-    `<div class="chatItem" onclick="openChat('${c}')">${c}</div>`
+
+  document.getElementById('chatList').innerHTML = chats.map(c =>
+    `<div class="chatItem" onclick="openChat('${c}')">
+      <img src="${getAvatar(c)}" class="avatar">
+      <div class="chatInfo"><b>${c}</b></div>
+    </div>`
   ).join('');
 }
 
@@ -62,10 +99,12 @@ function showSearch(){ hideAll(); document.getElementById('searchScreen').classL
 function searchUser(){
   let query = document.getElementById('searchInput').value.toLowerCase();
   let users = JSON.parse(localStorage.getItem('users')) || [];
-  let results = users.filter(u => u.user.toLowerCase().includes(query) && u.user !== currentUser);
-  
-  document.getElementById('searchResults').innerHTML = results.map(u => 
-    `<div class="chatItem" onclick="addChat('${u.user}')">${u.user} [Ongeza]</div>`
+  let results = users.filter(u => u.user.toLowerCase().includes(query) && u.user!== currentUser);
+
+  document.getElementById('searchResults').innerHTML = results.map(u =>
+    `<div class="chatItem" onclick="addChat('${u.user}')">
+      <img src="${getAvatar(u.user)}" class="avatar">${u.user} [Ongeza]
+    </div>`
   ).join('') || "Hakuna user aliyepatikana";
 }
 
@@ -83,19 +122,18 @@ function showCreateGroup(){ hideAll(); document.getElementById('groupScreen').cl
 function createGroup(){
   let name = document.getElementById('groupName').value;
   let members = document.getElementById('groupMembers').value.split(',').map(m => m.trim());
-  members.push(currentUser); // Jiongeze wewe
-  
+  members.push(currentUser);
+
   if(name === '') return alert("Weka jina la group");
-  
+
   let groups = JSON.parse(localStorage.getItem('groups_' + currentUser)) || [];
   groups.push({name: name, members: members});
   localStorage.setItem('groups_' + currentUser, JSON.stringify(groups));
-  
-  // Ongeza group kwenye chat list pia
+
   let chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
   chats.push("GROUP: " + name);
   localStorage.setItem('chats_' + currentUser, JSON.stringify(chats));
-  
+
   alert("Group " + name + " imeundwa");
   showChatList();
 }
@@ -110,6 +148,7 @@ function openChat(name){
   hideAll();
   document.getElementById('chatScreen').classList.remove('hidden');
   document.getElementById('chatWith').innerText = name;
+  document.getElementById('chatAvatar').src = getAvatar(name); // Weka picha ya huyo
   loadMessages();
 }
 
@@ -123,12 +162,13 @@ function sendMessage(){
   let input = document.getElementById('messageInput');
   let text = input.value;
   if(text === '') return;
-  
+
   let key = 'chat_' + currentUser + '_' + currentChat;
   let msgs = JSON.parse(localStorage.getItem(key)) || [];
-  msgs.push({from: currentUser, text: text, time: new Date().toLocaleTimeString()});
+  let time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  msgs.push({from: currentUser, text: text, time: time});
   localStorage.setItem(key, JSON.stringify(msgs));
-  
+
   input.value = '';
   loadMessages();
 }
@@ -136,8 +176,12 @@ function sendMessage(){
 function loadMessages(){
   let key = 'chat_' + currentUser + '_' + currentChat;
   let msgs = JSON.parse(localStorage.getItem(key)) || [];
-  document.getElementById('messages').innerHTML = msgs.map(m => 
-    `<div style="background:#2a2a2a; padding:8px; margin:5px; border-radius:8px;"><b>${m.from}:</b> ${m.text}</div>`
-  ).join('');
+  document.getElementById('messages').innerHTML = msgs.map(m => {
+    let isMe = m.from === currentUser;
+    return `<div class="msg ${isMe? 'me' : ''}">
+      ${m.text}
+      <div class="msgMeta">${m.time} ${isMe? '<span class="tick">✓✓</span>' : ''}</div>
+    </div>`
+  }).join('');
   document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 }
