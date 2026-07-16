@@ -1,0 +1,60 @@
+:root {
+  --bg-black: #0a0a0a;
+  --bg-dark: #121212;
+  --bg-card: #1e1e1e;
+  --text-white: #e0e0e0;
+  --text-gray: #888888;
+  --accent: #00ff88; /* Kijani cha neon */
+}
+
+body {
+  background: var(--bg-black);
+  color: var(--text-white);
+  font-family: Arial, sans-serif;
+  margin: 0;
+}
+
+.screen { padding: 15px; }
+.hidden { display: none; }
+
+.header {
+  background: var(--bg-dark);
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #333;
+}
+
+#chatList .chatItem {
+  background: var(--bg-card);
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+#chatList .chatItem:hover { background: #2a2a2a; }
+
+input, button {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  background: var(--bg-card);
+  color: var(--text-white);
+  border: 1px solid #333;
+  border-radius: 8px;
+}
+
+button {
+  background: var(--accent);
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#messages {
+  height: 70vh;
+  overflow-y: scroll;
+  background: var(--bg-black);
+  padding: 10px;
+}
