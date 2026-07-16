@@ -22,15 +22,39 @@
     <div id="chatListScreen" class="screen hidden">
       <div class="header">
         <h2>Mychatapp</h2>
-        <button onclick="showSearch()">🔍</button>
-        <button onclick="createGroup()">+ Group</button>
+        <div>
+          <button onclick="showSearch()">🔍</button>
+          <button onclick="showCreateGroup()">👥+</button>
+        </div>
       </div>
       <div id="chatList">
         <!-- NICK AI na chats nyingine zitawekwa hapa na JS -->
       </div>
     </div>
 
-    <!-- SCREEN 3: WINDOW YA CHAT -->
+    <!-- SCREEN 3: SEARCH USER -->
+    <div id="searchScreen" class="screen hidden">
+      <div class="header">
+        <button onclick="backToList()"><-</button>
+        <h2>Tafuta User</h2>
+      </div>
+      <input type="text" id="searchInput" placeholder="Andika username...">
+      <button onclick="searchUser()">Tafuta</button>
+      <div id="searchResults"></div>
+    </div>
+
+    <!-- SCREEN 4: KUUNDA GROUP -->
+    <div id="groupScreen" class="screen hidden">
+      <div class="header">
+        <button onclick="backToList()"><-</button>
+        <h2>Unda Group</h2>
+      </div>
+      <input type="text" id="groupName" placeholder="Jina la Group">
+      <input type="text" id="groupMembers" placeholder="Weka usernames: juma,aisha">
+      <button onclick="createGroup()">Unda Group</button>
+    </div>
+
+    <!-- SCREEN 5: WINDOW YA CHAT -->
     <div id="chatScreen" class="screen hidden">
       <div class="header">
         <button onclick="backToList()"><-</button>
