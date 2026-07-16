@@ -12,9 +12,16 @@ window.onload = () => {
   }
 }
 
-// PATA PICHA YA MTU. KAMA HANA TUMIA DEFAULT
+// PATA PICHA YA MTU. NICK AI ANA LOGO YAKE FIXED
 function getAvatar(name){
   let profiles = JSON.parse(localStorage.getItem('profiles')) || {};
+
+  // 1. KAMA NI NICK AI TUMIA LOGO YAKE YA LOCAL
+  if(name === "NICK AI"){
+    return "nick-logo.png";
+  }
+
+  // 2. KAMA NI WEWE AU MTU MINGINE TAFUTA KWENYE LOCALSTORAGE
   return profiles[name] || `https://i.pravatar.cc/150?u=${name}`;
 }
 
