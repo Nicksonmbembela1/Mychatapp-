@@ -11,16 +11,11 @@ const NICK_AI_LINK = "https://nick-ai.onrender.com";
 // 1. FUNCTION YA NOTIFICATION MPYA
 function showNotification(sender, message) {
   if (!("Notification" in window)) return;
-
   if (Notification.permission === "default") {
     Notification.requestPermission();
   }
-
-  // Piga sauti
   let audio = new Audio('notification.mp3');
   audio.play().catch(()=>{});
-
-  // Onyesha popup kama app haiko wazi
   if (Notification.permission === "granted" && document.hidden) {
     new Notification(`💬 ${sender}`, {
       body: message,
@@ -40,13 +35,12 @@ window.onload = async () => {
   let savedUser = localStorage.getItem('currentUser');
   if(savedUser){
     currentUser = savedUser;
-    // Pata id yake ya supabase
     let { data } = await supabase.from('profiles').select('id').eq('username', currentUser).single()
     currentUserId = data.id
     loadMyProfile();
     showChatList();
-    Notification.requestPermission(); // omba ruhusa mapema
-    checkNewMessages(); // anza kuangalia ujumbe kila sek 3
+    Notification.requestPermission();
+    checkNewMessages();
   }
 }
 
@@ -80,18 +74,16 @@ function updateProfilePic(event){
   reader.readAsDataURL(file);
 }
 
-// 1. REGISTER MPYA - INAHIFADHI NA KWENYE SUPABASE
+// 1. REGISTER MPYA
 async function register(){
   let user = document.getElementById('username').value;
   let pass = document.getElementById('password').value;
   if(user === '' || pass === '') return alert("Jaza username na password");
-
   const fakeEmail = makeFakeEmail(user)
   const { data: authData, error } = await supabase.auth.signUp({
     email: fakeEmail, password: pass, options: { data: { username: user } }
   })
   if(error) return alert("Error: " + error.message)
-
   await supabase.from('profiles').insert([{ id: authData.user.id, username: user }])
   alert("Umejisajili. Ingia sasa");
 }
@@ -103,7 +95,6 @@ async function login(){
   const fakeEmail = makeFakeEmail(user)
   const { data, error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: pass })
   if(error) return alert("Username au password si sahihi");
-
   currentUser = user
   currentUserId = data.user.id
   localStorage.setItem('currentUser', user);
@@ -116,13 +107,11 @@ async function login(){
 async function showChatList(){
   hideAll();
   document.getElementById('chatListScreen').classList.remove('hidden');
-
   let chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
   if(!chats.includes("NICK AI")){
     chats.unshift("NICK AI");
     localStorage.setItem('chats_' + currentUser, JSON.stringify(chats));
   }
-
   document.getElementById('chatList').innerHTML = chats.map(c =>
     `<div class="chatItem" onclick="openChat('${c}')">
       <img src="${getAvatar(c)}" class="avatar">
@@ -131,13 +120,12 @@ async function showChatList(){
   ).join('');
 }
 
-// 4. SEARCH USER - KUTOKA SUPABASE SASA
+// 4. SEARCH USER
 async function showSearch(){ hideAll(); document.getElementById('searchScreen').classList.remove('hidden'); }
 async function searchUser(){
   let query = document.getElementById('searchInput').value.toLowerCase();
   let { data: users } = await supabase.from('profiles').select('username').ilike('username', `%${query}%`)
   let results = users.filter(u => u.username!== currentUser);
-
   document.getElementById('searchResults').innerHTML = results.map(u =>
     `<div class="chatItem" onclick="addChat('${u.username}')">
       <img src="${getAvatar(u.username)}" class="avatar">${u.username} [Ongeza]
@@ -160,43 +148,34 @@ function createGroup(){ alert("Group bado local") }
 // 7. FUNGUA CHAT
 async function openChat(name){
   if(name === "NICK AI"){ window.open(NICK_AI_LINK, '_blank'); return; }
-
   currentChat = name;
-  // Pata id ya huyo mtu
   let { data } = await supabase.from('profiles').select('id').eq('username', name).single()
   currentChatId = data.id
-
   hideAll();
   document.getElementById('chatScreen').classList.remove('hidden');
   document.getElementById('chatWith').innerText = name;
   document.getElementById('chatAvatar').src = getAvatar(name);
-  loadMessages(); // panguza ujumbe mpya kwanza
+  loadMessages();
 }
 
 function backToList(){ showChatList(); }
 function hideAll(){ document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); }
 
-// 8. TUMA UJUMBE - HIFADHI LOCAL + TUMA SUPABASE
+// 8. TUMA UJUMBE
 async function sendMessage(){
   let input = document.getElementById('messageInput');
   let text = input.value;
   if(text === '') return;
-
   let time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
-  // 1. HIFADHI KWAKO KWANZA
   let myKey = 'chat_' + currentUser + '_' + currentChat;
   let msgs = JSON.parse(localStorage.getItem(myKey)) || [];
   msgs.push({from: currentUser, text: text, time: time});
   localStorage.setItem(myKey, JSON.stringify(msgs));
-
-  // 2. TUMA KWA SUPABASE ILI AFIKIWE
   await supabase.from('messages').insert([{
     sender_id: currentUserId,
     receiver_id: currentChatId,
     content: text
   }])
-
   input.value = '';
   loadMessages();
 }
@@ -214,48 +193,80 @@ function loadMessages(){
   document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 }
 
-// 9. FUNCTION MPYA: ANGALIA UJUMBE MPYA KILA SEK 3 NA UFUTE + PIGA NOTIF
+// 9. ANGALIA UJUMBE MPYA
 async function checkNewMessages(){
   if(!currentUserId) return setTimeout(checkNewMessages, 3000)
   let { data: newMsgs } = await supabase.from('messages').select('*').eq('receiver_id', currentUserId)
-
   if(newMsgs.length > 0){
-    // Pata majina ya watumaji
     let { data: profiles } = await supabase.from('profiles').select('*')
     let profileMap = Object.fromEntries(profiles.map(p => [p.id, p.username]))
-
     newMsgs.forEach(m => {
       let senderName = profileMap[m.sender_id]
-
-      // HAPA NDO TUNAPIGA NOTIFICATION
       showNotification(senderName, m.content)
-
-      // Ongeza kwenye chat list
       let chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
       if(!chats.includes(senderName)) chats.push(senderName);
       localStorage.setItem('chats_' + currentUser, JSON.stringify(chats));
-
-      // Hifadhi kwenye local ya mpokeaji
       let key = 'chat_' + currentUser + '_' + senderName;
       let msgs = JSON.parse(localStorage.getItem(key)) || [];
       let time = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       msgs.push({from: senderName, text: m.content, time: time});
       localStorage.setItem(key, JSON.stringify(msgs));
     })
-
-    // FUTA ZOTE KWENYE SUPABASE
     await supabase.from('messages').delete().eq('receiver_id', currentUserId)
-    showChatList(); // refresh ili ionyeshe chat mpya
+    showChatList();
   }
+  setTimeout(checkNewMessages, 3000)
+}
 
-  setTimeout(checkNewMessages, 3000) // rudia kila sek 3
+// 10. SETTINGS MPYA
+function showSettings(){
+  hideAll();
+  document.getElementById('settingsScreen').classList.remove('hidden');
+}
+
+function logout(){
+  supabase.auth.signOut();
+  localStorage.removeItem('currentUser');
+  location.reload();
+}
+
+async function deleteAccount(){
+  let confirmDelete = confirm("Una uhakika unataka kufuta account yako? Hii haiwezi kurejeshwa. Bonyeza OK ili kuendelea");
+
+  if(confirmDelete){
+    try{
+      // 1. FUTA PROFILE
+      await supabase.from('profiles').delete().eq('id', currentUserId)
+
+      // 2. FUTA MESSAGES ZOTE ZILIZOHUSU YEYE
+      await supabase.from('messages').delete().eq('sender_id', currentUserId)
+      await supabase.from('messages').delete().eq('receiver_id', currentUserId)
+
+      // 3. FUTA LOCALSTORAGE YOTE YA HUYU MTU
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('chats_' + currentUser);
+      Object.keys(localStorage).forEach(key => {
+        if(key.startsWith('chat_' + currentUser + '_')){
+          localStorage.removeItem(key);
+        }
+      })
+
+      // 4. LOGOUT
+      await supabase.auth.signOut();
+
+      alert("Account yako imefutwa kabisa. Jisajili upya kama unataka kurejea");
+      location.reload();
+    }catch(err){
+      alert("Hitilafu: " + err.message)
+    }
+  }
 }
 
 // SERVICE WORKER
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')
-    .then(reg => console.log('Service Worker: Imefanikiwa ✅'))
-    .catch(err => console.log('Service Worker: Imefeli ❌', err));
+   .then(reg => console.log('Service Worker: Imefanikiwa ✅'))
+   .catch(err => console.log('Service Worker: Imefeli ❌', err));
   });
 }
