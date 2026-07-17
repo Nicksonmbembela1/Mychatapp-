@@ -8,6 +8,28 @@ let currentChat = null; // username anaeongea naye
 let currentChatId = null; // id ya supabase ya anaeongea naye
 const NICK_AI_LINK = "https://nick-ai.onrender.com";
 
+// 1. FUNCTION YA NOTIFICATION MPYA
+function showNotification(sender, message) {
+  if (!("Notification" in window)) return;
+
+  if (Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+
+  // Piga sauti
+  let audio = new Audio('notification.mp3');
+  audio.play().catch(()=>{});
+
+  // Onyesha popup kama app haiko wazi
+  if (Notification.permission === "granted" && document.hidden) {
+    new Notification(`💬 ${sender}`, {
+      body: message,
+      icon: 'nick-logo.png',
+      tag: sender
+    });
+  }
+}
+
 // TENGENEZA EMAIL FAKE
 function makeFakeEmail(username) {
   return `${username.toLowerCase().trim()}@mychatapp.app`
@@ -23,6 +45,7 @@ window.onload = async () => {
     currentUserId = data.id
     loadMyProfile();
     showChatList();
+    Notification.requestPermission(); // omba ruhusa mapema
     checkNewMessages(); // anza kuangalia ujumbe kila sek 3
   }
 }
@@ -85,6 +108,7 @@ async function login(){
   currentUserId = data.user.id
   localStorage.setItem('currentUser', user);
   loadMyProfile(); showChatList();
+  Notification.requestPermission();
   checkNewMessages();
 }
 
@@ -136,7 +160,7 @@ function createGroup(){ alert("Group bado local") }
 // 7. FUNGUA CHAT
 async function openChat(name){
   if(name === "NICK AI"){ window.open(NICK_AI_LINK, '_blank'); return; }
-  
+
   currentChat = name;
   // Pata id ya huyo mtu
   let { data } = await supabase.from('profiles').select('id').eq('username', name).single()
@@ -190,10 +214,11 @@ function loadMessages(){
   document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 }
 
-// 9. FUNCTION MPYA: ANGALIA UJUMBE MPYA KILA SEK 3 NA UFUTE
+// 9. FUNCTION MPYA: ANGALIA UJUMBE MPYA KILA SEK 3 NA UFUTE + PIGA NOTIF
 async function checkNewMessages(){
+  if(!currentUserId) return setTimeout(checkNewMessages, 3000)
   let { data: newMsgs } = await supabase.from('messages').select('*').eq('receiver_id', currentUserId)
-  
+
   if(newMsgs.length > 0){
     // Pata majina ya watumaji
     let { data: profiles } = await supabase.from('profiles').select('*')
@@ -201,6 +226,10 @@ async function checkNewMessages(){
 
     newMsgs.forEach(m => {
       let senderName = profileMap[m.sender_id]
+
+      // HAPA NDO TUNAPIGA NOTIFICATION
+      showNotification(senderName, m.content)
+
       // Ongeza kwenye chat list
       let chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
       if(!chats.includes(senderName)) chats.push(senderName);
@@ -218,7 +247,7 @@ async function checkNewMessages(){
     await supabase.from('messages').delete().eq('receiver_id', currentUserId)
     showChatList(); // refresh ili ionyeshe chat mpya
   }
-  
+
   setTimeout(checkNewMessages, 3000) // rudia kila sek 3
 }
 
@@ -226,7 +255,7 @@ async function checkNewMessages(){
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')
-     .then(reg => console.log('Service Worker: Imefanikiwa ✅'))
-     .catch(err => console.log('Service Worker: Imefeli ❌', err));
+    .then(reg => console.log('Service Worker: Imefanikiwa ✅'))
+    .catch(err => console.log('Service Worker: Imefeli ❌', err));
   });
 }
