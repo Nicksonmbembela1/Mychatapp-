@@ -32,6 +32,7 @@
         <div>
           <button onclick="showSearch()">🔍</button>
           <button onclick="showCreateGroup()">👥+</button>
+          <button onclick="showSettings()">⚙️</button> <!-- BUTTON MPYA YA SETTINGS -->
         </div>
       </div>
       <div id="chatList"></div>
@@ -84,6 +85,19 @@
       <div class="inputArea">
         <input type="text" id="messageInput" placeholder="Andika ujumbe...">
         <button onclick="sendMessage()">Tuma</button>
+      </div>
+    </div>
+
+    <!-- SCREEN 7: SETTINGS MPYA -->
+    <div id="settingsScreen" class="screen hidden">
+      <div class="header">
+        <button onclick="backToList()" class="backBtn">⬅</button>
+        <h2>Settings</h2>
+      </div>
+      <div class="settingsList">
+        <div class="settingItem" onclick="showProfile()">👤 Profile Yangu</div>
+        <div class="settingItem" onclick="logout()">🚪 Logout</div>
+        <div class="settingItem danger" onclick="deleteAccount()">🗑️ Delete My Account</div>
       </div>
     </div>
 
