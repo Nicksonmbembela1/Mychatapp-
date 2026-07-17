@@ -1,38 +1,46 @@
-let currentUser = null;
-let currentChat = null;
+const SUPABASE_URL = window.ENV.SUPABASE_URL
+const SUPABASE_KEY = window.ENV.SUPABASE_ANON_KEY
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+let currentUser = null; // username
+let currentUserId = null; // id ya supabase
+let currentChat = null; // username anaeongea naye
+let currentChatId = null; // id ya supabase ya anaeongea naye
 const NICK_AI_LINK = "https://nick-ai.onrender.com";
 
+// TENGENEZA EMAIL FAKE
+function makeFakeEmail(username) {
+  return `${username.toLowerCase().trim()}@mychatapp.app`
+}
+
 // Wakati app inafunguka
-window.onload = () => {
+window.onload = async () => {
   let savedUser = localStorage.getItem('currentUser');
   if(savedUser){
     currentUser = savedUser;
-    loadMyProfile(); // PAKIA PICHA YAKO
+    // Pata id yake ya supabase
+    let { data } = await supabase.from('profiles').select('id').eq('username', currentUser).single()
+    currentUserId = data.id
+    loadMyProfile();
     showChatList();
+    checkNewMessages(); // anza kuangalia ujumbe kila sek 3
   }
 }
 
-// PATA PICHA YA MTU. NICK AI ANA LOGO YAKE FIXED
+// PATA PICHA YA MTU
 function getAvatar(name){
   let profiles = JSON.parse(localStorage.getItem('profiles')) || {};
-
-  // 1. KAMA NI NICK AI TUMIA LOGO YAKE YA LOCAL
-  if(name === "NICK AI"){
-    return "nick-logo.png";
-  }
-
-  // 2. KAMA NI WEWE AU MTU MINGINE TAFUTA KWENYE LOCALSTORAGE
+  if(name === "NICK AI"){ return "nick-logo.png"; }
   return profiles[name] || `https://i.pravatar.cc/150?u=${name}`;
 }
 
-// PAKIA PICHA YAKO KILA MAHALI
+// PAKIA PICHA YAKO
 function loadMyProfile(){
   document.getElementById('myAvatar').src = getAvatar(currentUser);
   document.getElementById('profileName').innerText = currentUser;
   document.getElementById('profilePreview').src = getAvatar(currentUser);
 }
 
-// ONYESHA PROFILE SCREEN
 function showProfile(){ hideAll(); document.getElementById('profileScreen').classList.remove('hidden'); }
 
 // BADILISHA PICHA
@@ -42,48 +50,46 @@ function updateProfilePic(event){
   let reader = new FileReader();
   reader.onload = function(e){
     let profiles = JSON.parse(localStorage.getItem('profiles')) || {};
-    profiles[currentUser] = e.target.result; // tunahifadhi kama base64
+    profiles[currentUser] = e.target.result;
     localStorage.setItem('profiles', JSON.stringify(profiles));
-    loadMyProfile();
-    showChatList(); // Refresh list ili picha ibadilike
-    alert("Picha imebadilika");
+    loadMyProfile(); showChatList(); alert("Picha imebadilika");
   }
   reader.readAsDataURL(file);
 }
 
-// 1. REGISTER
-function register(){
+// 1. REGISTER MPYA - INAHIFADHI NA KWENYE SUPABASE
+async function register(){
   let user = document.getElementById('username').value;
   let pass = document.getElementById('password').value;
   if(user === '' || pass === '') return alert("Jaza username na password");
 
-  let users = JSON.parse(localStorage.getItem('users')) || [];
-  if(users.find(u => u.user === user)) return alert("Username ipo tayari");
+  const fakeEmail = makeFakeEmail(user)
+  const { data: authData, error } = await supabase.auth.signUp({
+    email: fakeEmail, password: pass, options: { data: { username: user } }
+  })
+  if(error) return alert("Error: " + error.message)
 
-  users.push({user: user, pass: pass});
-  localStorage.setItem('users', JSON.stringify(users));
+  await supabase.from('profiles').insert([{ id: authData.user.id, username: user }])
   alert("Umejisajili. Ingia sasa");
 }
 
-// 2. LOGIN
-function login(){
+// 2. LOGIN MPYA
+async function login(){
   let user = document.getElementById('username').value;
   let pass = document.getElementById('password').value;
-  let users = JSON.parse(localStorage.getItem('users')) || [];
-  let found = users.find(u => u.user === user && u.pass === pass);
+  const fakeEmail = makeFakeEmail(user)
+  const { data, error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: pass })
+  if(error) return alert("Username au password si sahihi");
 
-  if(found){
-    currentUser = user;
-    localStorage.setItem('currentUser', user);
-    loadMyProfile();
-    showChatList();
-  } else {
-    alert("Username au password si sahihi");
-  }
+  currentUser = user
+  currentUserId = data.user.id
+  localStorage.setItem('currentUser', user);
+  loadMyProfile(); showChatList();
+  checkNewMessages();
 }
 
 // 3. ONYESHA LIST YA CHATS
-function showChatList(){
+async function showChatList(){
   hideAll();
   document.getElementById('chatListScreen').classList.remove('hidden');
 
@@ -101,22 +107,22 @@ function showChatList(){
   ).join('');
 }
 
-// 4. SEARCH USER
-function showSearch(){ hideAll(); document.getElementById('searchScreen').classList.remove('hidden'); }
-function searchUser(){
+// 4. SEARCH USER - KUTOKA SUPABASE SASA
+async function showSearch(){ hideAll(); document.getElementById('searchScreen').classList.remove('hidden'); }
+async function searchUser(){
   let query = document.getElementById('searchInput').value.toLowerCase();
-  let users = JSON.parse(localStorage.getItem('users')) || [];
-  let results = users.filter(u => u.user.toLowerCase().includes(query) && u.user!== currentUser);
+  let { data: users } = await supabase.from('profiles').select('username').ilike('username', `%${query}%`)
+  let results = users.filter(u => u.username!== currentUser);
 
   document.getElementById('searchResults').innerHTML = results.map(u =>
-    `<div class="chatItem" onclick="addChat('${u.user}')">
-      <img src="${getAvatar(u.user)}" class="avatar">${u.user} [Ongeza]
+    `<div class="chatItem" onclick="addChat('${u.username}')">
+      <img src="${getAvatar(u.username)}" class="avatar">${u.username} [Ongeza]
     </div>`
   ).join('') || "Hakuna user aliyepatikana";
 }
 
 // 5. ONGEZA CHAT MPYA
-function addChat(username){
+async function addChat(username){
   let chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
   if(!chats.includes(username)) chats.push(username);
   localStorage.setItem('chats_' + currentUser, JSON.stringify(chats));
@@ -124,57 +130,48 @@ function addChat(username){
   showChatList();
 }
 
-// 6. KUUNDA GROUP
-function showCreateGroup(){ hideAll(); document.getElementById('groupScreen').classList.remove('hidden'); }
-function createGroup(){
-  let name = document.getElementById('groupName').value;
-  let members = document.getElementById('groupMembers').value.split(',').map(m => m.trim());
-  members.push(currentUser);
-
-  if(name === '') return alert("Weka jina la group");
-
-  let groups = JSON.parse(localStorage.getItem('groups_' + currentUser)) || [];
-  groups.push({name: name, members: members});
-  localStorage.setItem('groups_' + currentUser, JSON.stringify(groups));
-
-  let chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
-  chats.push("GROUP: " + name);
-  localStorage.setItem('chats_' + currentUser, JSON.stringify(chats));
-
-  alert("Group " + name + " imeundwa");
-  showChatList();
-}
+function showCreateGroup(){ alert("Group bado local") }
+function createGroup(){ alert("Group bado local") }
 
 // 7. FUNGUA CHAT
-function openChat(name){
-  if(name === "NICK AI"){
-    window.open(NICK_AI_LINK, '_blank');
-    return;
-  }
+async function openChat(name){
+  if(name === "NICK AI"){ window.open(NICK_AI_LINK, '_blank'); return; }
+  
   currentChat = name;
+  // Pata id ya huyo mtu
+  let { data } = await supabase.from('profiles').select('id').eq('username', name).single()
+  currentChatId = data.id
+
   hideAll();
   document.getElementById('chatScreen').classList.remove('hidden');
   document.getElementById('chatWith').innerText = name;
-  document.getElementById('chatAvatar').src = getAvatar(name); // Weka picha ya huyo
-  loadMessages();
+  document.getElementById('chatAvatar').src = getAvatar(name);
+  loadMessages(); // panguza ujumbe mpya kwanza
 }
 
 function backToList(){ showChatList(); }
-function hideAll(){
-  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-}
+function hideAll(){ document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); }
 
-// 8. TUMA UJUMBE
-function sendMessage(){
+// 8. TUMA UJUMBE - HIFADHI LOCAL + TUMA SUPABASE
+async function sendMessage(){
   let input = document.getElementById('messageInput');
   let text = input.value;
   if(text === '') return;
 
-  let key = 'chat_' + currentUser + '_' + currentChat;
-  let msgs = JSON.parse(localStorage.getItem(key)) || [];
   let time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+  // 1. HIFADHI KWAKO KWANZA
+  let myKey = 'chat_' + currentUser + '_' + currentChat;
+  let msgs = JSON.parse(localStorage.getItem(myKey)) || [];
   msgs.push({from: currentUser, text: text, time: time});
-  localStorage.setItem(key, JSON.stringify(msgs));
+  localStorage.setItem(myKey, JSON.stringify(msgs));
+
+  // 2. TUMA KWA SUPABASE ILI AFIKIWE
+  await supabase.from('messages').insert([{
+    sender_id: currentUserId,
+    receiver_id: currentChatId,
+    content: text
+  }])
 
   input.value = '';
   loadMessages();
@@ -193,7 +190,39 @@ function loadMessages(){
   document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 }
 
-// ========= ONGEZA HII CHINI KABISA: SAJILI SERVICE WORKER =========
+// 9. FUNCTION MPYA: ANGALIA UJUMBE MPYA KILA SEK 3 NA UFUTE
+async function checkNewMessages(){
+  let { data: newMsgs } = await supabase.from('messages').select('*').eq('receiver_id', currentUserId)
+  
+  if(newMsgs.length > 0){
+    // Pata majina ya watumaji
+    let { data: profiles } = await supabase.from('profiles').select('*')
+    let profileMap = Object.fromEntries(profiles.map(p => [p.id, p.username]))
+
+    newMsgs.forEach(m => {
+      let senderName = profileMap[m.sender_id]
+      // Ongeza kwenye chat list
+      let chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
+      if(!chats.includes(senderName)) chats.push(senderName);
+      localStorage.setItem('chats_' + currentUser, JSON.stringify(chats));
+
+      // Hifadhi kwenye local ya mpokeaji
+      let key = 'chat_' + currentUser + '_' + senderName;
+      let msgs = JSON.parse(localStorage.getItem(key)) || [];
+      let time = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      msgs.push({from: senderName, text: m.content, time: time});
+      localStorage.setItem(key, JSON.stringify(msgs));
+    })
+
+    // FUTA ZOTE KWENYE SUPABASE
+    await supabase.from('messages').delete().eq('receiver_id', currentUserId)
+    showChatList(); // refresh ili ionyeshe chat mpya
+  }
+  
+  setTimeout(checkNewMessages, 3000) // rudia kila sek 3
+}
+
+// SERVICE WORKER
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')
