@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#00ff88">
   <meta name="apple-mobile-web-app-capable" content="yes">
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <div id="app">
@@ -32,7 +32,7 @@
         <div>
           <button onclick="showSearch()">🔍</button>
           <button onclick="showCreateGroup()">👥+</button>
-          <button onclick="showSettings()">⚙️</button> <!-- BUTTON MPYA YA SETTINGS -->
+          <button onclick="showSettings()">⚙️</button> <!-- BUTTON YA SETTINGS -->
         </div>
       </div>
       <div id="chatList"></div>
@@ -102,6 +102,10 @@
     </div>
 
   </div>
-  <script src="app.js"></script>
+
+  <!-- LIBRARIES ZA SUPABASE - ZILIZOKUWA ZINAKOSA -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="env.js"></script>
+  <script src="app.js?v=6"></script> <!-- ?v=6 KUVUNJA CACHE -->
 </body>
 </html>
