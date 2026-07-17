@@ -1,6 +1,6 @@
 const SUPABASE_URL = window.ENV.SUPABASE_URL
 const SUPABASE_KEY = window.ENV.SUPABASE_ANON_KEY
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY) // FIX HAPA
 
 let currentUser = null; // username
 let currentUserId = null; // id ya supabase
@@ -35,7 +35,7 @@ window.onload = async () => {
   let savedUser = localStorage.getItem('currentUser');
   if(savedUser){
     currentUser = savedUser;
-    let { data } = await supabase.from('profiles').select('id').eq('username', currentUser).single()
+    let { data } = await supabaseClient.from('profiles').select('id').eq('username', currentUser).single()
     currentUserId = data.id
     loadMyProfile();
     showChatList();
@@ -80,11 +80,11 @@ async function register(){
   let pass = document.getElementById('password').value;
   if(user === '' || pass === '') return alert("Jaza username na password");
   const fakeEmail = makeFakeEmail(user)
-  const { data: authData, error } = await supabase.auth.signUp({
+  const { data: authData, error } = await supabaseClient.auth.signUp({
     email: fakeEmail, password: pass, options: { data: { username: user } }
   })
   if(error) return alert("Error: " + error.message)
-  await supabase.from('profiles').insert([{ id: authData.user.id, username: user }])
+  await supabaseClient.from('profiles').insert([{ id: authData.user.id, username: user }])
   alert("Umejisajili. Ingia sasa");
 }
 
@@ -93,7 +93,7 @@ async function login(){
   let user = document.getElementById('username').value;
   let pass = document.getElementById('password').value;
   const fakeEmail = makeFakeEmail(user)
-  const { data, error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: pass })
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email: fakeEmail, password: pass })
   if(error) return alert("Username au password si sahihi");
   currentUser = user
   currentUserId = data.user.id
@@ -124,7 +124,7 @@ async function showChatList(){
 async function showSearch(){ hideAll(); document.getElementById('searchScreen').classList.remove('hidden'); }
 async function searchUser(){
   let query = document.getElementById('searchInput').value.toLowerCase();
-  let { data: users } = await supabase.from('profiles').select('username').ilike('username', `%${query}%`)
+  let { data: users } = await supabaseClient.from('profiles').select('username').ilike('username', `%${query}%`)
   let results = users.filter(u => u.username!== currentUser);
   document.getElementById('searchResults').innerHTML = results.map(u =>
     `<div class="chatItem" onclick="addChat('${u.username}')">
@@ -149,7 +149,7 @@ function createGroup(){ alert("Group bado local") }
 async function openChat(name){
   if(name === "NICK AI"){ window.open(NICK_AI_LINK, '_blank'); return; }
   currentChat = name;
-  let { data } = await supabase.from('profiles').select('id').eq('username', name).single()
+  let { data } = await supabaseClient.from('profiles').select('id').eq('username', name).single()
   currentChatId = data.id
   hideAll();
   document.getElementById('chatScreen').classList.remove('hidden');
@@ -171,7 +171,7 @@ async function sendMessage(){
   let msgs = JSON.parse(localStorage.getItem(myKey)) || [];
   msgs.push({from: currentUser, text: text, time: time});
   localStorage.setItem(myKey, JSON.stringify(msgs));
-  await supabase.from('messages').insert([{
+  await supabaseClient.from('messages').insert([{
     sender_id: currentUserId,
     receiver_id: currentChatId,
     content: text
@@ -196,9 +196,9 @@ function loadMessages(){
 // 9. ANGALIA UJUMBE MPYA
 async function checkNewMessages(){
   if(!currentUserId) return setTimeout(checkNewMessages, 3000)
-  let { data: newMsgs } = await supabase.from('messages').select('*').eq('receiver_id', currentUserId)
+  let { data: newMsgs } = await supabaseClient.from('messages').select('*').eq('receiver_id', currentUserId)
   if(newMsgs.length > 0){
-    let { data: profiles } = await supabase.from('profiles').select('*')
+    let { data: profiles } = await supabaseClient.from('profiles').select('*')
     let profileMap = Object.fromEntries(profiles.map(p => [p.id, p.username]))
     newMsgs.forEach(m => {
       let senderName = profileMap[m.sender_id]
@@ -212,53 +212,40 @@ async function checkNewMessages(){
       msgs.push({from: senderName, text: m.content, time: time});
       localStorage.setItem(key, JSON.stringify(msgs));
     })
-    await supabase.from('messages').delete().eq('receiver_id', currentUserId)
+    await supabaseClient.from('messages').delete().eq('receiver_id', currentUserId)
     showChatList();
   }
   setTimeout(checkNewMessages, 3000)
 }
 
-// 10. SETTINGS MPYA
+// 10. SETTINGS MPYA - ZIPO SAWA
 function showSettings(){
   hideAll();
   document.getElementById('settingsScreen').classList.remove('hidden');
 }
 
 function logout(){
-  supabase.auth.signOut();
+  supabaseClient.auth.signOut();
   localStorage.removeItem('currentUser');
   location.reload();
 }
 
 async function deleteAccount(){
   let confirmDelete = confirm("Una uhakika unataka kufuta account yako? Hii haiwezi kurejeshwa. Bonyeza OK ili kuendelea");
-
   if(confirmDelete){
     try{
-      // 1. FUTA PROFILE
-      await supabase.from('profiles').delete().eq('id', currentUserId)
-
-      // 2. FUTA MESSAGES ZOTE ZILIZOHUSU YEYE
-      await supabase.from('messages').delete().eq('sender_id', currentUserId)
-      await supabase.from('messages').delete().eq('receiver_id', currentUserId)
-
-      // 3. FUTA LOCALSTORAGE YOTE YA HUYU MTU
+      await supabaseClient.from('profiles').delete().eq('id', currentUserId)
+      await supabaseClient.from('messages').delete().eq('sender_id', currentUserId)
+      await supabaseClient.from('messages').delete().eq('receiver_id', currentUserId)
       localStorage.removeItem('currentUser');
       localStorage.removeItem('chats_' + currentUser);
       Object.keys(localStorage).forEach(key => {
-        if(key.startsWith('chat_' + currentUser + '_')){
-          localStorage.removeItem(key);
-        }
+        if(key.startsWith('chat_' + currentUser + '_')){ localStorage.removeItem(key); }
       })
-
-      // 4. LOGOUT
-      await supabase.auth.signOut();
-
+      await supabaseClient.auth.signOut();
       alert("Account yako imefutwa kabisa. Jisajili upya kama unataka kurejea");
       location.reload();
-    }catch(err){
-      alert("Hitilafu: " + err.message)
-    }
+    }catch(err){ alert("Hitilafu: " + err.message) }
   }
 }
 
@@ -266,7 +253,7 @@ async function deleteAccount(){
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')
-   .then(reg => console.log('Service Worker: Imefanikiwa ✅'))
-   .catch(err => console.log('Service Worker: Imefeli ❌', err));
+  .then(reg => console.log('Service Worker: Imefanikiwa ✅'))
+  .catch(err => console.log('Service Worker: Imefeli ❌', err));
   });
 }
