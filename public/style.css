@@ -243,6 +243,39 @@ body {
 #searchResults { padding: 0 15px; }
 #searchResults .chatItem { margin-top: 10px; }
 
+/* SETTINGS MPYA - THEME YA NEON */
+.settingsList {
+  padding: 15px;
+  background: #0a0a0a;
+  flex: 1;
+  overflow-y: auto;
+}
+.settingItem {
+  background: #1a1a1a;
+  padding: 16px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  border: 1px solid #2a2a2a;
+  transition: 0.2s;
+  color: #e0e0e0;
+}
+.settingItem:active { 
+  background: #242424; 
+  transform: scale(0.98);
+  border-color: #00ff88;
+}
+.settingItem.danger {
+  color: #ff3b30;
+  border-color: #ff3b30;
+  font-weight: bold;
+}
+.settingItem.danger:active { 
+  background: #2a0f0f;
+  border-color: #ff3b30;
+}
+
 /* SCROLLBAR NZURI */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-thumb { background: #00ff88; border-radius: 10px; }
