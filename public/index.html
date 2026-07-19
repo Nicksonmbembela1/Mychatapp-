@@ -2,121 +2,790 @@
 <html lang="sw">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mychatapp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mychatapp Pro</title>
 
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#00ff88">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-  <link rel="stylesheet" href="style.css?v=2">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== RESET & BASE ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #1a1a2e;
+      --bg-input: #1e1e32;
+      --text-primary: #f0f0f5;
+      --text-secondary: #a0a0b8;
+      --accent: #00ff88;
+      --accent-glow: rgba(0, 255, 136, 0.25);
+      --danger: #ff4757;
+      --border: rgba(255,255,255,0.06);
+      --radius: 16px;
+      --shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+
+    html, body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100%;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+
+    /* ===== APP CONTAINER ===== */
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      height: 100vh;
+      background: var(--bg-primary);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    /* ===== SCREENS ===== */
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      background: var(--bg-primary);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+      transform: translateX(100%);
+      opacity: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .screen.active {
+      transform: translateX(0);
+      opacity: 1;
+      z-index: 10;
+    }
+
+    .screen.slide-left {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+
+    /* ===== HEADERS ===== */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      min-height: 64px;
+      flex-shrink: 0;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #fff, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header .backBtn {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+      transition: transform 0.2s;
+    }
+
+    .header .backBtn:active {
+      transform: scale(0.85);
+    }
+
+    .header .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      cursor: pointer;
+      object-fit: cover;
+      transition: transform 0.2s;
+    }
+
+    .header .avatar:active {
+      transform: scale(0.9);
+    }
+
+    .headerActions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .headerActions button {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+      transition: color 0.2s, transform 0.2s;
+    }
+
+    .headerActions button:active {
+      transform: scale(0.85);
+      color: var(--accent);
+    }
+
+    /* ===== LOGIN SCREEN ===== */
+    #loginScreen {
+      justify-content: center;
+      align-items: center;
+      padding: 40px 24px;
+      background: radial-gradient(ellipse at 50% 30%, #1a2a2a, var(--bg-primary) 70%);
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    #loginScreen h1 {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 30%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #loginScreen .subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    #loginScreen input {
+      width: 100%;
+      max-width: 320px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    #loginScreen input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    #loginScreen input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .loginBtn {
+      width: 100%;
+      max-width: 320px;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 4px;
+    }
+
+    .loginBtn.primary {
+      background: linear-gradient(135deg, var(--accent), #00cc77);
+      color: #0a0a0f;
+    }
+
+    .loginBtn.primary:active {
+      transform: scale(0.97);
+      box-shadow: 0 0 30px var(--accent-glow);
+    }
+
+    .loginBtn.secondary {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .loginBtn.secondary:active {
+      transform: scale(0.97);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .loginDivider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      max-width: 320px;
+      margin: 12px 0;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .loginDivider::before,
+    .loginDivider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ===== CHAT LIST ===== */
+    #chatListScreen .header h2 {
+      -webkit-text-fill-color: #fff;
+    }
+
+    #chatList {
+      flex: 1;
+      padding: 8px 16px 80px;
+      overflow-y: auto;
+    }
+
+    .chatItem {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.25s;
+      border: 1px solid transparent;
+    }
+
+    .chatItem:active {
+      transform: scale(0.98);
+      border-color: var(--accent);
+    }
+
+    .chatItem .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 2px solid var(--border);
+    }
+
+    .chatItem .info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chatItem .info .name {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .chatItem .info .lastMsg {
+      color: var(--text-secondary);
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chatItem .time {
+      color: var(--text-secondary);
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .chatItem .badge {
+      background: var(--accent);
+      color: #0a0a0f;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+
+    /* ===== CHAT SCREEN ===== */
+    .chatHeader .chatWith {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chatHeader .chatWith h2 {
+      -webkit-text-fill-color: #fff;
+      font-size: 16px;
+    }
+
+    .chatHeader .chatWith .status {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 400;
+    }
+
+    #messages {
+      flex: 1;
+      padding: 16px 16px 80px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: 10px 16px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.5;
+      animation: msgIn 0.25s ease;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .msg.sent {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--accent), #00cc77);
+      color: #0a0a0f;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.received {
+      align-self: flex-start;
+      background: var(--bg-card);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg .time {
+      font-size: 10px;
+      opacity: 0.6;
+      margin-top: 4px;
+      display: block;
+    }
+
+    .inputArea {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .inputArea input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.3s;
+    }
+
+    .inputArea input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .inputArea button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, var(--accent), #00cc77);
+      color: #0a0a0f;
+      font-weight: 700;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: transform 0.2s;
+      white-space: nowrap;
+    }
+
+    .inputArea button:active {
+      transform: scale(0.93);
+    }
+
+    /* ===== PROFILE ===== */
+    .profileBox {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px;
+      gap: 16px;
+    }
+
+    .bigAvatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--accent);
+      box-shadow: 0 0 40px var(--accent-glow);
+    }
+
+    .uploadBtn {
+      padding: 10px 24px;
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: var(--bg-card);
+    }
+
+    .uploadBtn:active {
+      transform: scale(0.95);
+      border-color: var(--accent);
+    }
+
+    #profileInput {
+      display: none;
+    }
+
+    #profileName {
+      font-size: 22px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    /* ===== SETTINGS ===== */
+    .settingsList {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .settingItem {
+      padding: 16px 18px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 15px;
+      font-weight: 500;
+      border: 1px solid transparent;
+    }
+
+    .settingItem:active {
+      transform: scale(0.97);
+      border-color: var(--accent);
+    }
+
+    .settingItem.danger {
+      color: var(--danger);
+    }
+
+    .settingItem.danger:active {
+      border-color: var(--danger);
+    }
+
+    /* ===== SEARCH / GROUP ===== */
+    #searchScreen input,
+    #groupScreen input {
+      width: 100%;
+      padding: 14px 18px;
+      margin: 12px 16px;
+      width: calc(100% - 32px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    #searchScreen input:focus,
+    #groupScreen input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    #searchScreen button,
+    #groupScreen button {
+      margin: 0 16px;
+      padding: 12px;
+      border: none;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--accent), #00cc77);
+      color: #0a0a0f;
+      font-weight: 700;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      width: calc(100% - 32px);
+    }
+
+    #searchResults {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .searchResult {
+      padding: 14px 16px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .searchResult:active {
+      transform: scale(0.97);
+      border: 1px solid var(--accent);
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .emptyState {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .emptyState .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .emptyState h3 {
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 999;
+      max-width: 90%;
+      backdrop-filter: blur(20px);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (min-width: 481px) {
+      #app {
+        border-radius: 24px;
+        margin-top: 20px;
+        height: calc(100vh - 40px);
+        max-height: 900px;
+      }
+      body {
+        background: #050508;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .header h2 { font-size: 15px; }
+      .header .avatar { width: 30px; height: 30px; }
+    }
+  </style>
 </head>
 <body>
-  <div id="app">
 
-    <!-- SCREEN 1: LOGIN -->
-    <div id="loginScreen" class="screen">
-      <h1>Mychatapp</h1>
-      <input type="text" id="username" placeholder="Username">
-      <input type="password" id="password" placeholder="Password">
-      <button onclick="login()">Ingia</button>
-      <button onclick="register()">Jisajili</button>
-    </div>
+<div id="app">
 
-    <!-- SCREEN 2: LIST YA CHATS -->
-    <div id="chatListScreen" class="screen hidden">
-      <div class="header">
-        <img id="myAvatar" src="https://i.pravatar.cc/40" class="avatar" onclick="showProfile()">
-        <h2>Mychatapp</h2>
-        <div>
-          <button onclick="showSearch()">🔍</button>
-          <button onclick="showCreateGroup()">👥+</button>
-          <button onclick="showSettings()">⚙️</button> <!-- BUTTON YA SETTINGS -->
-        </div>
-      </div>
-      <div id="chatList"></div>
-    </div>
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
 
-    <!-- SCREEN 3: PROFILE YANGU -->
-    <div id="profileScreen" class="screen hidden">
-      <div class="header">
-        <button onclick="backToList()" class="backBtn">⬅</button>
-        <h2>Profile Yangu</h2>
-      </div>
-      <div class="profileBox">
-        <img id="profilePreview" src="https://i.pravatar.cc/150" class="bigAvatar">
-        <label for="profileInput" class="uploadBtn">Badilisha Picha</label>
-        <input type="file" id="profileInput" accept="image/*" onchange="updateProfilePic(event)">
-        <h3 id="profileName"></h3>
-      </div>
-    </div>
-
-    <!-- SCREEN 4: SEARCH USER -->
-    <div id="searchScreen" class="screen hidden">
-      <div class="header">
-        <button onclick="backToList()" class="backBtn">⬅</button>
-        <h2>Tafuta User</h2>
-      </div>
-      <input type="text" id="searchInput" placeholder="Andika username...">
-      <button onclick="searchUser()">Tafuta</button>
-      <div id="searchResults"></div>
-    </div>
-
-    <!-- SCREEN 5: KUUNDA GROUP -->
-    <div id="groupScreen" class="screen hidden">
-      <div class="header">
-        <button onclick="backToList()" class="backBtn">⬅</button>
-        <h2>Unda Group</h2>
-      </div>
-      <input type="text" id="groupName" placeholder="Jina la Group">
-      <input type="text" id="groupMembers" placeholder="Weka usernames: juma,aisha">
-      <button onclick="createGroup()">Unda Group</button>
-    </div>
-
-    <!-- SCREEN 6: WINDOW YA CHAT -->
-    <div id="chatScreen" class="screen hidden">
-      <div class="header chatHeader">
-        <button onclick="backToList()" class="backBtn">⬅</button>
-        <img id="chatAvatar" src="https://i.pravatar.cc/40" class="avatar">
-        <h2 id="chatWith">NICK AI</h2>
-      </div>
-      <div id="messages"></div>
-      <div class="inputArea">
-        <input type="text" id="messageInput" placeholder="Andika ujumbe...">
-        <button onclick="sendMessage()">Tuma</button>
-      </div>
-    </div>
-
-    <!-- SCREEN 7: SETTINGS MPYA -->
-    <div id="settingsScreen" class="screen hidden">
-      <div class="header">
-        <button onclick="backToList()" class="backBtn">⬅</button>
-        <h2>Settings</h2>
-      </div>
-      <div class="settingsList">
-        <div class="settingItem" onclick="showProfile()">👤 Profile Yangu</div>
-        <div class="settingItem" onclick="logout()">🚪 Logout</div>
-        <div class="settingItem danger" onclick="deleteAccount()">🗑️ Delete My Account</div>
-      </div>
-    </div>
-
+  <!-- SCREEN 1: LOGIN -->
+  <div id="loginScreen" class="screen active">
+    <h1>💬 Mychatapp</h1>
+    <p class="subtitle">Connect with the world, instantly</p>
+    <input type="text" id="username" placeholder="Username" autocomplete="username">
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+    <button class="loginBtn primary" onclick="login()">🚀 Sign In</button>
+    <div class="loginDivider">or</div>
+    <button class="loginBtn secondary" onclick="register()">📝 Create Account</button>
   </div>
 
-  <!-- LIBRARIES ZA SUPABASE -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- ENV IMEWEKWA DIRECT HAPA ILI APK ISISHINDWE -->
-  <script>
-  window.ENV = {
-    SUPABASE_URL: "https://msaaughyobndhtetdnxg.supabase.co",
-    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zYWF1Z2h5b2JuZGh0ZXRkbnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTQ3ODIsImV4cCI6MjA5OTUzMDc4Mn0.c2F6sGtHTZ05qi3g6SK88skTZrlWzcBYkYDte5hYxQY"
-  }
-  </script>
+  <!-- SCREEN 2: CHAT LIST -->
+  <div id="chatListScreen" class="screen">
+    <div class="header">
+      <img id="myAvatar" src="https://i.pravatar.cc/40" class="avatar" onclick="showProfile()">
+      <h2>💬 Chats</h2>
+      <div class="headerActions">
+        <button onclick="showSearch()">🔍</button>
+        <button onclick="showCreateGroup()">👥+</button>
+        <button onclick="showSettings()">⚙️</button>
+      </div>
+    </div>
+    <div id="chatList">
+      <div class="emptyState">
+        <div class="icon">🤝</div>
+        <h3>No chats yet</h3>
+        <p>Search for users or create a group</p>
+      </div>
+    </div>
+  </div>
 
-  <!-- APP.JS INABADILIKA YENYEWE KILA SEKUNDE - HAKUNA CACHE -->
-  <script>
-    document.write('<script src="app.js?v=' + new Date().getTime() + '"><\/script>')
-  </script>
+  <!-- SCREEN 3: PROFILE -->
+  <div id="profileScreen" class="screen">
+    <div class="header">
+      <button class="backBtn" onclick="backToList()">←</button>
+      <h2>👤 Profile</h2>
+      <div style="width:40px;"></div>
+    </div>
+    <div class="profileBox">
+      <img id="profilePreview" src="https://i.pravatar.cc/150" class="bigAvatar">
+      <label for="profileInput" class="uploadBtn">📸 Change Photo</label>
+      <input type="file" id="profileInput" accept="image/*" onchange="updateProfilePic(event)">
+      <h3 id="profileName">Username</h3>
+      <p style="color:var(--text-secondary);font-size:13px;">Tap photo to change</p>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: SEARCH -->
+  <div id="searchScreen" class="screen">
+    <div class="header">
+      <button class="backBtn" onclick="backToList()">←</button>
+      <h2>🔍 Search</h2>
+      <div style="width:40px;"></div>
+    </div>
+    <input type="text" id="searchInput" placeholder="Search username...">
+    <button onclick="searchUser()">Find Users</button>
+    <div id="searchResults"></div>
+  </div>
+
+  <!-- SCREEN 5: CREATE GROUP -->
+  <div id="groupScreen" class="screen">
+    <div class="header">
+      <button class="backBtn" onclick="backToList()">←</button>
+      <h2>👥 New Group</h2>
+      <div style="width:40px;"></div>
+    </div>
+    <input type="text" id="groupName" placeholder="Group name">
+    <input type="text" id="groupMembers" placeholder="Members: juma, aisha, john">
+    <button onclick="createGroup()">✨ Create Group</button>
+  </div>
+
+  <!-- SCREEN 6: CHAT WINDOW -->
+  <div id="chatScreen" class="screen">
+    <div class="header chatHeader">
+      <button class="backBtn" onclick="backToList()">←</button>
+      <div class="chatWith">
+        <img id="chatAvatar" src="https://i.pravatar.cc/40" class="avatar">
+        <div>
+          <h2 id="chatWith">User</h2>
+          <span class="status">● Online</span>
+        </div>
+      </div>
+      <div style="width:40px;"></div>
+    </div>
+    <div id="messages">
+      <div class="emptyState" style="padding:40px 20px;">
+        <div class="icon">💭</div>
+        <h3>No messages yet</h3>
+        <p>Say hello to start the conversation</p>
+      </div>
+    </div>
+    <div class="inputArea">
+      <input type="text" id="messageInput" placeholder="Type a message...">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 7: SETTINGS -->
+  <div id="settingsScreen" class="screen">
+    <div class="header">
+      <button class="backBtn" onclick="backToList()">←</button>
+      <h2>⚙️ Settings</h2>
+      <div style="width:40px;"></div>
+    </div>
+    <div class="settingsList">
+      <div class="settingItem" onclick="showProfile()">👤 My Profile</div>
+      <div class="settingItem" onclick="logout()">🚪 Logout</div>
+      <div class="settingItem danger" onclick="deleteAccount()">🗑️ Delete Account</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== SUPABASE ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ===== ENV ===== -->
+<script>
+window.ENV = {
+  SUPABASE_URL: "https://msaaughyobndhtetdnxg.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zYWF1Z2h5b2JuZGh0ZXRkbnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTQ3ODIsImV4cCI6MjA5OTUzMDc4Mn0.c2F6sGtHTZ05qi3g6SK88skTZrlWzcBYkYDte5hYxQY"
+}
+</script>
+
+<!-- ===== APP.JS (NO CACHE) ===== -->
+<script>
+document.write('<script src="app.js?v=' + Date.now() + '"><\/script>')
+</script>
+
 </body>
 </html>
