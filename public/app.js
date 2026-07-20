@@ -1,1036 +1,929 @@
-<!DOCTYPE html>
-<html lang="sw">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nick Chat Pro</title>
-    <link rel="manifest" href="/manifest.json">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: #f0f2f5;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .app-container {
-            max-width: 450px;
-            margin: 0 auto;
-            height: 100vh;
-            background: white;
-            position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        .screen {
-            display: none;
-            height: 100vh;
-            flex-direction: column;
-        }
-        .screen.active {
-            display: flex;
-        }
-        .header {
-            background: #075e54;
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-height: 60px;
-            position: relative;
-            z-index: 10;
-        }
-        .header .back {
-            cursor: pointer;
-            font-size: 24px;
-            padding: 5px;
-        }
-        .header .title {
-            flex: 1;
-            font-size: 18px;
-            font-weight: 600;
-        }
-        .header .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid rgba(255,255,255,0.3);
-        }
-        .header .status {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-        .chat-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px 0;
-        }
-        .chat-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            cursor: pointer;
-            transition: background 0.2s;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .chat-item:hover {
-            background: #f5f5f5;
-        }
-        .chat-item .avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-right: 12px;
-        }
-        .chat-item .info {
-            flex: 1;
-        }
-        .chat-item .name {
-            font-weight: 600;
-            font-size: 16px;
-        }
-        .chat-item .last-msg {
-            font-size: 14px;
-            color: #667781;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 200px;
-        }
-        .chat-item .time {
-            font-size: 12px;
-            color: #667781;
-        }
-        .chat-item .badge {
-            background: #25d366;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 8px;
-            font-size: 12px;
-            margin-left: 8px;
-        }
-        .messages-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            background: #e5ddd5;
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTBlMGMwIi8+PC9zdmc+');
-        }
-        .message {
-            max-width: 80%;
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            position: relative;
-            word-wrap: break-word;
-            animation: fadeIn 0.3s;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .message.sent {
-            background: #dcf8c6;
-            margin-left: auto;
-            border-bottom-right-radius: 0;
-        }
-        .message.received {
-            background: white;
-            margin-right: auto;
-            border-bottom-left-radius: 0;
-        }
-        .message .time {
-            font-size: 11px;
-            color: #667781;
-            margin-top: 4px;
-            text-align: right;
-        }
-        .message .status-icon {
-            font-size: 14px;
-            margin-left: 4px;
-        }
-        .message .reactions {
-            position: absolute;
-            bottom: -12px;
-            right: -5px;
-            background: white;
-            border-radius: 12px;
-            padding: 2px 6px;
-            font-size: 14px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            display: flex;
-            gap: 2px;
-        }
-        .message .reactions span {
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .message .reactions span:hover {
-            transform: scale(1.3);
-        }
-        .message .image-msg {
-            max-width: 200px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        .message .voice-msg {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 150px;
-        }
-        .message .voice-msg .play-btn {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: #075e54;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .message .voice-msg .progress {
-            flex: 1;
-            height: 4px;
-            background: #ddd;
-            border-radius: 2px;
-            position: relative;
-        }
-        .message .voice-msg .progress .fill {
-            height: 100%;
-            background: #075e54;
-            border-radius: 2px;
-            width: 0%;
-        }
-        .typing-indicator {
-            display: none;
-            padding: 8px 15px;
-            background: white;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            max-width: 80%;
-            font-size: 14px;
-            color: #667781;
-        }
-        .typing-indicator .dots {
-            display: inline-block;
-            animation: typing 1.4s infinite;
-        }
-        @keyframes typing {
-            0%, 60%, 100% { opacity: 0; }
-            30% { opacity: 1; }
-        }
-        .input-area {
-            padding: 10px 15px;
-            background: #f0f2f5;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-top: 1px solid #e0e0e0;
-        }
-        .input-area input {
-            flex: 1;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 20px;
-            font-size: 15px;
-            outline: none;
-            background: white;
-        }
-        .input-area .emoji-btn, .input-area .attach-btn, .input-area .send-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 5px;
-            color: #075e54;
-        }
-        .input-area .send-btn {
-            background: #075e54;
-            color: white;
-            border-radius: 50%;
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-        .input-area .send-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .login-screen {
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background: linear-gradient(135deg, #075e54, #128c7e);
-        }
-        .login-screen .logo {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: white;
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 50px;
-        }
-        .login-screen input {
-            width: 100%;
-            max-width: 300px;
-            padding: 12px 15px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-        .login-screen button {
-            width: 100%;
-            max-width: 300px;
-            padding: 12px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            background: #25d366;
-            color: white;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .login-screen button:hover {
-            transform: scale(1.02);
-        }
-        .login-screen .toggle-link {
-            color: white;
-            cursor: pointer;
-            margin-top: 10px;
-            text-decoration: underline;
-        }
-        .settings-screen {
-            padding: 20px;
-        }
-        .settings-screen .setting-item {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-        }
-        .settings-screen .setting-item:hover {
-            background: #f5f5f5;
-        }
-        .profile-pic-upload {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            cursor: pointer;
-        }
-        .profile-pic-upload img {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #075e54;
-        }
-        .profile-pic-upload input {
-            display: none;
-        }
-        .dark-mode {
-            background: #1a1a1a;
-            color: white;
-        }
-        .dark-mode .messages-container {
-            background: #0d0d0d;
-        }
-        .dark-mode .message.received {
-            background: #262626;
-            color: white;
-        }
-        .dark-mode .message.sent {
-            background: #056162;
-            color: white;
-        }
-        .dark-mode .input-area {
-            background: #1a1a1a;
-            border-top: 1px solid #333;
-        }
-        .dark-mode .input-area input {
-            background: #333;
-            color: white;
-        }
-        .dark-mode .chat-item {
-            border-bottom: 1px solid #333;
-        }
-        .dark-mode .chat-item:hover {
-            background: #2a2a2a;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal.active {
-            display: flex;
-        }
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            max-width: 90%;
-            max-height: 80%;
-            overflow-y: auto;
-        }
-        .modal-content img {
-            max-width: 100%;
-            border-radius: 8px;
-        }
-        .emoji-picker {
-            display: none;
-            position: absolute;
-            bottom: 70px;
-            background: white;
-            padding: 10px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            max-height: 200px;
-            overflow-y: auto;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
-            width: 280px;
-        }
-        .emoji-picker.active {
-            display: grid;
-        }
-        .emoji-picker span {
-            font-size: 28px;
-            cursor: pointer;
-            text-align: center;
-            padding: 5px;
-        }
-        .emoji-picker span:hover {
-            background: #f0f0f0;
-            border-radius: 4px;
-        }
-        .floating-btn {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            background: #25d366;
-            color: white;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            border: none;
-            font-size: 30px;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
-            z-index: 50;
-        }
-        .floating-btn:hover {
-            transform: scale(1.1);
-        }
-        .search-container {
-            padding: 10px 20px;
-            background: #f0f2f5;
-        }
-        .search-container input {
-            width: 100%;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 20px;
-            font-size: 15px;
-            outline: none;
-        }
-        .online-status {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-left: 5px;
-        }
-        .online-status.online {
-            background: #25d366;
-        }
-        .online-status.offline {
-            background: #ccc;
-        }
-        .context-menu {
-            display: none;
-            position: fixed;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            padding: 5px 0;
-            z-index: 2000;
-            min-width: 150px;
-        }
-        .context-menu.active {
-            display: block;
-        }
-        .context-menu .item {
-            padding: 10px 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .context-menu .item:hover {
-            background: #f5f5f5;
-        }
-        @media (max-width: 450px) {
-            .app-container {
-                max-width: 100%;
-            }
-        }
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-    </style>
-</head>
-<body>
-    <div class="app-container" id="app">
-        <!-- Login Screen -->
-        <div id="loginScreen" class="screen active">
-            <div class="login-screen">
-                <div class="logo">💬</div>
-                <h2 style="color:white; margin-bottom:20px;">Nick Chat Pro</h2>
-                <input type="text" id="username" placeholder="Username" autocomplete="username">
-                <input type="password" id="password" placeholder="Password" autocomplete="current-password">
-                <button onclick="login()">🔑 Ingia</button>
-                <button onclick="register()" style="background:#128c7e;">📝 Jisajili</button>
-                <span class="toggle-link" onclick="toggleAuthMode()">Nina akaunti? Ingia</span>
-                <div style="margin-top:20px; color:white; font-size:12px; opacity:0.7;">
-                    Powered by Supabase ❤️
-                </div>
-            </div>
-        </div>
+// ============================================
+// NICK CHAT PRO - ENTERPRISE EDITION
+// ============================================
 
-        <!-- Chat List Screen -->
-        <div id="chatListScreen" class="screen">
-            <div class="header">
-                <img id="myAvatar" class="avatar" src="" alt="Profile">
-                <div class="title">Chats</div>
-                <span style="cursor:pointer; font-size:20px;" onclick="showSearch()">🔍</span>
-                <span style="cursor:pointer; font-size:20px; margin-left:8px;" onclick="showSettings()">⚙️</span>
-            </div>
-            <div class="search-container">
-                <input type="text" id="chatSearch" placeholder="🔍 Search chats..." oninput="filterChats()">
-            </div>
-            <div class="chat-list" id="chatList"></div>
-            <button class="floating-btn" onclick="showNewChat()">✏️</button>
-        </div>
+// ============================================
+// 1. CONFIGURATION
+// ============================================
 
-        <!-- Chat Screen -->
-        <div id="chatScreen" class="screen">
-            <div class="header">
-                <span class="back" onclick="backToList()">←</span>
-                <img id="chatAvatar" class="avatar" src="" alt="Chat">
-                <div>
-                    <div class="title" id="chatWith"></div>
-                    <div class="status" id="chatStatus">🟢 Online</div>
-                </div>
-                <span style="cursor:pointer; font-size:20px; margin-left:auto;" onclick="showChatInfo()">⋮</span>
-            </div>
-            <div class="messages-container" id="messagesContainer">
-                <div class="typing-indicator" id="typingIndicator">
-                    <span id="typingUser">Mtu</span> anaandika<span class="dots">...</span>
-                </div>
-                <div id="messages"></div>
-            </div>
-            <div class="input-area" style="position:relative;">
-                <button class="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
-                <button class="attach-btn" onclick="document.getElementById('fileInput').click()">📎</button>
-                <input type="file" id="fileInput" style="display:none;" accept="image/*,audio/*">
-                <input type="text" id="messageInput" placeholder="Andika ujumbe..." oninput="onTyping()">
-                <button class="send-btn" onclick="sendMessage()">➤</button>
-                <div class="emoji-picker" id="emojiPicker"></div>
-            </div>
-        </div>
+const CONFIG = {
+    SUPABASE_URL: window.ENV?.SUPABASE_URL || 'YOUR_SUPABASE_URL',
+    SUPABASE_KEY: window.ENV?.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_KEY',
+    STORAGE_PREFIX: 'nickchat_',
+    MAX_MESSAGE_LENGTH: 2000,
+    TYPING_TIMEOUT: 3000,
+    DEBOUNCE_DELAY: 300,
+};
 
-        <!-- Search Screen -->
-        <div id="searchScreen" class="screen">
-            <div class="header">
-                <span class="back" onclick="backToList()">←</span>
-                <div class="title">Tafuta</div>
-            </div>
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Tafuta user..." oninput="searchUser()">
-            </div>
-            <div class="chat-list" id="searchResults"></div>
-        </div>
+// ============================================
+// 2. VALIDATION & HELPERS
+// ============================================
 
-        <!-- Settings Screen -->
-        <div id="settingsScreen" class="screen">
-            <div class="header">
-                <span class="back" onclick="backToList()">←</span>
-                <div class="title">Mipangilio</div>
-            </div>
-            <div class="settings-screen">
-                <div class="profile-pic-upload" onclick="document.getElementById('profilePicInput').click()">
-                    <img id="profilePreview" src="" alt="Profile">
-                    <span style="margin-top:10px; color:#075e54;">Badilisha picha</span>
-                    <input type="file" id="profilePicInput" accept="image/*" onchange="updateProfilePic(event)">
-                </div>
-                <div class="setting-item" onclick="toggleDarkMode()">
-                    <span>🌙 Dark Mode</span>
-                    <span id="darkModeToggle">OFF</span>
-                </div>
-                <div class="setting-item" onclick="clearAllChats()">
-                    <span>🗑️ Futa chats zote</span>
-                </div>
-                <div class="setting-item" onclick="exportChats()">
-                    <span>📤 Export chats</span>
-                </div>
-                <div class="setting-item" onclick="logout()">
-                    <span>🚪 Logout</span>
-                </div>
-                <div class="setting-item" onclick="deleteAccount()" style="color:red;">
-                    <span>⚠️ Futa Account</span>
-                </div>
-                <div style="padding:20px; text-align:center; color:#667781; font-size:12px;">
-                    Version 2.0 Pro<br>
-                    Made with ❤️
-                </div>
-            </div>
-        </div>
+const Validators = {
+    isNotEmpty: (str) => str && str.trim().length > 0,
+    isValidUsername: (str) => /^[a-zA-Z0-9_\s]{2,30}$/.test(str),
+    isValidPassword: (str) => str && str.length >= 4,
+    sanitize: (str) => str.replace(/[<>]/g, '').trim(),
+};
 
-        <!-- Modal -->
-        <div class="modal" id="modal">
-            <div class="modal-content" id="modalContent"></div>
-        </div>
+const Helpers = {
+    generateId: () => 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+    formatTime: (isoString) => {
+        const date = new Date(isoString);
+        return date.toLocaleTimeString('sw', { hour: '2-digit', minute: '2-digit' });
+    },
+    formatDate: (isoString) => {
+        const date = new Date(isoString);
+        const today = new Date();
+        if (date.toDateString() === today.toDateString()) return 'Leo';
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (date.toDateString() === yesterday.toDateString()) return 'Jana';
+        return date.toLocaleDateString('sw', { day: 'numeric', month: 'short' });
+    },
+    getAvatar: (name) => {
+        if (!name) return 'https://i.pravatar.cc/150?u=default';
+        return `https://i.pravatar.cc/150?u=${encodeURIComponent(name)}`;
+    },
+    truncate: (text, maxLen = 30) => {
+        if (!text) return '';
+        return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
+    },
+    debounce: (fn, delay = CONFIG.DEBOUNCE_DELAY) => {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn(...args), delay);
+        };
+    },
+};
 
-        <!-- Context Menu -->
-        <div class="context-menu" id="contextMenu">
-            <div class="item" onclick="deleteMessage()">🗑️ Delete</div>
-            <div class="item" onclick="editMessage()">✏️ Edit</div>
-            <div class="item" onclick="forwardMessage()">➡️ Forward</div>
-        </div>
-    </div>
+// ============================================
+// 3. UI MANAGER (DOM Manipulation)
+// ============================================
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        // ============================================
-        // PRO CHAT APPLICATION - FULL FEATURED
-        // ============================================
+class UIManager {
+    constructor() {
+        this.cache = {};
+        this.cacheElements();
+        this.setupEventListeners();
+    }
+
+    cacheElements() {
+        const ids = [
+            'loginScreen', 'chatListScreen', 'chatScreen', 'searchScreen', 'settingsScreen',
+            'username', 'password', 'chatList', 'messages', 'messageInput', 'sendBtn',
+            'chatWith', 'chatAvatar', 'myAvatar', 'profilePreview', 'chatStatus',
+            'typingIndicator', 'typingUser', 'emojiPicker', 'searchInput', 'searchResults',
+            'chatSearch', 'darkModeToggle', 'modal', 'modalContent', 'contextMenu',
+            'fileInput', 'profilePicInput', 'messagesContainer'
+        ];
         
-        const SUPABASE_URL = window.ENV?.SUPABASE_URL || 'YOUR_SUPABASE_URL';
-        const SUPABASE_KEY = window.ENV?.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_KEY';
-        
-        if(!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-            alert("ERROR: Weka SUPABASE_URL na KEY yako kwenye env.js");
-        }
-        
-        const supabase = supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        // State
-        let currentUser = null;
-        let currentUserId = null;
-        let currentChat = null;
-        let currentChatId = null;
-        let currentMessages = [];
-        let typingTimeout = null;
-        let isDarkMode = false;
-        let selectedMessageId = null;
-        let messageReactions = {};
-        let onlineUsers = new Set();
-        let unreadCounts = {};
-        
-        // ============================================
-        // AUTHENTICATION
-        // ============================================
-        
-        function makeFakeEmail(username) {
-            return `${username.toLowerCase().trim()}@chatapp.com`;
-        }
-        
-        async function register() {
-            const user = document.getElementById('username').value.trim();
-            const pass = document.getElementById('password').value;
-            
-            if(!user || !pass) {
-                showToast('Tafadhali jaza username na password');
-                return;
-            }
-            
-            try {
-                const fakeEmail = makeFakeEmail(user);
-                const { data, error } = await supabase.auth.signUp({
-                    email: fakeEmail,
-                    password: pass,
-                    options: { data: { username: user } }
-                });
-                
-                if(error) throw error;
-                
-                await supabase.from('profiles').insert([{
-                    id: data.user.id,
-                    username: user,
-                    avatar: `https://i.pravatar.cc/150?u=${user}`,
-                    status: 'online',
-                    last_seen: new Date().toISOString()
-                }]);
-                
-                showToast('✅ Umejisajili! Ingia sasa.');
-            } catch(err) {
-                showToast('❌ Error: ' + err.message);
-            }
-        }
-        
-        async function login() {
-            const user = document.getElementById('username').value.trim();
-            const pass = document.getElementById('password').value;
-            
-            if(!user || !pass) {
-                showToast('Tafadhali jaza username na password');
-                return;
-            }
-            
-            try {
-                const fakeEmail = makeFakeEmail(user);
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: fakeEmail,
-                    password: pass
-                });
-                
-                if(error) throw error;
-                
-                currentUser = user;
-                currentUserId = data.user.id;
-                
-                // Update status
-                await supabase.from('profiles').update({
-                    status: 'online',
-                    last_seen: new Date().toISOString()
-                }).eq('id', currentUserId);
-                
-                localStorage.setItem('currentUser', user);
-                localStorage.setItem('currentUserId', currentUserId);
-                
-                loadMyProfile();
-                showChatList();
-                setupRealtime();
-                Notification.requestPermission();
-                
-                showToast('👋 Welcome back, ' + user + '!');
-            } catch(err) {
-                showToast('❌ Username au password si sahihi');
-            }
-        }
-        
-        function toggleAuthMode() {
-            const btn = event.target;
-            if(btn.innerText.includes('Ingia')) {
-                btn.innerText = 'Nina akaunti? Ingia';
-                document.querySelector('.login-screen button:first-of-type').innerText = '📝 Jisajili';
-                document.querySelector('.login-screen button:last-of-type').innerHTML = '🔑 Ingia';
-            } else {
-                btn.innerText = 'Nina akaunti? Ingia';
-                document.querySelector('.login-screen button:first-of-type').innerText = '🔑 Ingia';
-                document.querySelector('.login-screen button:last-of-type').innerHTML = '📝 Jisajili';
-            }
-        }
-        
-        function logout() {
-            supabase.auth.signOut();
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('currentUserId');
-            location.reload();
-        }
-        
-        async function deleteAccount() {
-            if(!confirm('Una uhakika unataka kufuta account yako? Hii haiwezi kurejeshwa!')) return;
-            
-            try {
-                await supabase.from('profiles').delete().eq('id', currentUserId);
-                await supabase.from('messages').delete().or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`);
-                await supabase.auth.signOut();
-                localStorage.clear();
-                showToast('Account imefutwa');
-                location.reload();
-            } catch(err) {
-                showToast('Error: ' + err.message);
-            }
-        }
-        
-        // ============================================
-        // PROFILE
-        // ============================================
-        
-        function getAvatar(name) {
-            const profiles = JSON.parse(localStorage.getItem('profiles')) || {};
-            return profiles[name] || `https://i.pravatar.cc/150?u=${name}`;
-        }
-        
-        function loadMyProfile() {
-            document.getElementById('myAvatar').src = getAvatar(currentUser);
-            document.getElementById('profilePreview').src = getAvatar(currentUser);
-        }
-        
-        function updateProfilePic(event) {
-            const file = event.target.files[0];
-            if(!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const profiles = JSON.parse(localStorage.getItem('profiles')) || {};
-                profiles[currentUser] = e.target.result;
-                localStorage.setItem('profiles', JSON.stringify(profiles));
-                
-                // Update in Supabase
-                await supabase.from('profiles').update({
-                    avatar: e.target.result
-                }).eq('id', currentUserId);
-                
-                loadMyProfile();
-                showChatList();
-                showToast('✅ Picha imebadilika!');
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        // ============================================
-        // CHAT LIST
-        // ============================================
-        
-        async function showChatList() {
-            hideAllScreens();
-            document.getElementById('chatListScreen').classList.add('active');
-            
-            const chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
-            if(!chats.includes('NICK AI')) {
-                chats.unshift('NICK AI');
-                localStorage.setItem('chats_' + currentUser, JSON.stringify(chats));
-            }
-            
-            // Get online statuses
-            const { data: profiles } = await supabase.from('profiles').select('username, status');
-            const statusMap = {};
-            profiles?.forEach(p => statusMap[p.username] = p.status);
-            
-            const chatList = document.getElementById('chatList');
-            chatList.innerHTML = chats.map(c => {
-                const lastMsg = getLastMessage(c);
-                const unread = unreadCounts[c] || 0;
-                const status = statusMap[c] === 'online' ? '🟢' : '⚪';
-                
-                return `
-                    <div class="chat-item" onclick="openChat('${c}')">
-                        <img src="${getAvatar(c)}" class="avatar">
-                        <div class="info">
-                            <div class="name">${c} ${status}</div>
-                            <div class="last-msg">${lastMsg || 'Hakuna ujumbe'}</div>
-                        </div>
-                        ${unread ? `<span class="badge">${unread}</span>` : ''}
-                    </div>
-                `;
-            }).join('');
-            
-            // Load chat count
-            document.getElementById('chatSearch').value = '';
-        }
-        
-        function filterChats() {
-            const query = document.getElementById('chatSearch').value.toLowerCase();
-            const items = document.querySelectorAll('.chat-item');
-            items.forEach(item => {
-                const name = item.querySelector('.name')?.innerText?.toLowerCase() || '';
-                item.style.display = name.includes(query) ? 'flex' : 'none';
+        ids.forEach(id => {
+            this.cache[id] = document.getElementById(id);
+        });
+    }
+
+    setupEventListeners() {
+        // Auto-resize textarea
+        if (this.cache.messageInput) {
+            this.cache.messageInput.addEventListener('input', () => {
+                this.cache.messageInput.style.height = 'auto';
+                this.cache.messageInput.style.height = Math.min(this.cache.messageInput.scrollHeight, 120) + 'px';
             });
         }
-        
-        function getLastMessage(chat) {
-            const key = 'chat_' + currentUser + '_' + chat;
-            const msgs = JSON.parse(localStorage.getItem(key)) || [];
-            if(msgs.length === 0) return null;
-            const last = msgs[msgs.length - 1];
-            return last.text.length > 30 ? last.text.substring(0, 30) + '...' : last.text;
-        }
-        
-        // ============================================
-        // SEARCH
-        // ============================================
-        
-        function showSearch() {
-            hideAllScreens();
-            document.getElementById('searchScreen').classList.add('active');
-            document.getElementById('searchInput').focus();
-        }
-        
-        async function searchUser() {
-            const query = document.getElementById('searchInput').value.trim();
-            if(!query) {
-                document.getElementById('searchResults').innerHTML = '';
-                return;
+
+        // Send on Enter (Shift+Enter for new line)
+        this.cache.messageInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.dispatchEvent(new CustomEvent('sendMessage'));
             }
-            
-            const { data: users } = await supabase
-                .from('profiles')
-                .select('username')
-                .ilike('username', `%${query}%`)
-                .neq('username', currentUser)
-                .limit(10);
-            
-            const results = document.getElementById('searchResults');
-            if(!users || users.length === 0) {
-                results.innerHTML = '<div style="padding:20px; text-align:center; color:#667781;">Hakuna user aliyepatikana</div>';
-                return;
-            }
-            
-            const chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
-            results.innerHTML = users.map(u => {
-                const isAdded = chats.includes(u.username);
-                return `
-                    <div class="chat-item" onclick="${isAdded ? `openChat('${u.username}')` : `addChat('${u.username}')`}">
-                        <img src="${getAvatar(u.username)}" class="avatar">
-                        <div class="info">
-                            <div class="name">${u.username}</div>
-                        </div>
-                        <span style="color:#075e54;">${isAdded ? '💬' : '➕'}</span>
+        });
+
+        // Click outside to close context menu
+        document.addEventListener('click', () => {
+            this.cache.contextMenu?.classList.remove('active');
+        });
+
+        // Emoji picker toggle
+        document.querySelector('.emoji-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.cache.emojiPicker?.classList.toggle('active');
+        });
+
+        document.addEventListener('click', () => {
+            this.cache.emojiPicker?.classList.remove('active');
+        });
+    }
+
+    showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        this.cache[screenId]?.classList.add('active');
+    }
+
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 12px; color: white;
+            font-weight: 500; z-index: 9999; max-width: 90%;
+            animation: slideUp 0.3s ease;
+            background: ${type === 'error' ? '#e74c3c' : type === 'success' ? '#25d366' : '#075e54'};
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-size: 14px;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    renderMessages(messages, currentUserId, chatUser) {
+        const container = this.cache.messages;
+        if (!container) return;
+
+        if (messages.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; color:#667781; padding:40px 20px;">
+                    <div style="font-size:48px; margin-bottom:10px;">💬</div>
+                    <div>Hakuna ujumbe bado</div>
+                    <div style="font-size:12px; margin-top:5px;">Andika ujumbe wa kwanza!</div>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        let lastDate = '';
+        let lastSender = '';
+
+        messages.forEach((msg, index) => {
+            const isSent = msg.sender_id === currentUserId;
+            const msgDate = Helpers.formatDate(msg.created_at);
+            const msgTime = Helpers.formatTime(msg.created_at);
+            const senderName = isSent ? 'Mimi' : chatUser;
+
+            // Date separator
+            if (msgDate !== lastDate) {
+                html += `
+                    <div style="text-align:center; margin:10px 0; color:#667781; font-size:12px;">
+                        ${msgDate}
                     </div>
                 `;
-            }).join('');
-        }
-        
-        async function addChat(username) {
-            const chats = JSON.parse(localStorage.getItem('chats_' + currentUser)) || [];
-            if(!chats.includes(username)) {
-                chats.push(username);
-                localStorage.setItem('chats_' + currentUser, JSON.stringify(chats));
-                showToast('✅ Umeanza chat na ' + username);
+                lastDate = msgDate;
             }
-            showChatList();
-        }
-        
-        function showNewChat() {
-            showSearch();
-        }
-        
-        // ============================================
-        // CHAT SCREEN
-        // ============================================
-        
-        async function openChat(name) {
-            if(name === 'NICK AI') {
-                window.open('https://nick-ai.onrender.com', '_blank');
-                return;
+
+            // Sender name for received messages
+            let nameHtml = '';
+            if (!isSent && senderName !== lastSender) {
+                nameHtml = `
+                    <div style="font-size:11px; font-weight:600; color:#075e54; margin-bottom:2px;">
+                        ${senderName}
+                    </div>
+                `;
+                lastSender = senderName;
+            } else if (isSent) {
+                lastSender = '';
             }
+
+            const statusIcon = msg.read ? '✓✓' : '✓';
             
-            currentChat = name;
-            
-            // Get user ID
-            const { data } = await supabase
-                .from('profiles')
-                .select('id, status')
-                .eq('username', name)
-                .single();
-            
-            if(data) {
-                currentChatId = data.id;
-                document.getElementById('chatStatus').innerHTML = 
-                    data.status === 'online' ? '🟢 Online' : '⚪ Offline';
+            // Build reactions
+            let reactionsHtml = '';
+            if (msg.reactions && msg.reactions.length > 0) {
+                reactionsHtml = `
+                    <div class="reactions">
+                        ${msg.reactions.map(r => `<span onclick="App.messageManager.addReaction('${msg.id}', '${r}')">${r}</span>`).join('')}
+                    </div>
+                `;
             }
-            
-            hideAllScreens();
-            document.getElementById('chatScreen').classList.add('active');
-            document.getElementById('chatWith').innerText = name;
-            document.getElementById('chatAvatar').src = getAvatar(name);
-            
-            // Clear unread count
-            unreadCounts[name] = 0;
-            
-            // Load messages
-            await loadMessages();
-            
-            // Mark messages as read in DB
-            await supabase
+
+            html += `
+                <div class="message ${isSent ? 'sent' : 'received'}" 
+                     data-id="${msg.id}" 
+                     onclick="App.messageManager.selectMessage('${msg.id}')"
+                     oncontextmenu="App.messageManager.showContextMenu(event, '${msg.id}')">
+                    ${nameHtml}
+                    <div>${Helpers.sanitize(msg.content || msg.text || '')}</div>
+                    <div class="time">
+                        ${msgTime}
+                        ${isSent ? `<span class="status-icon">${statusIcon}</span>` : ''}
+                    </div>
+                    ${reactionsHtml}
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+        this.scrollToBottom();
+    }
+
+    scrollToBottom() {
+        const container = this.cache.messagesContainer;
+        if (container) {
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
+        }
+    }
+
+    showTyping(user, isTyping) {
+        const indicator = this.cache.typingIndicator;
+        const userEl = this.cache.typingUser;
+        if (!indicator || !userEl) return;
+
+        if (isTyping && user) {
+            userEl.textContent = user;
+            indicator.style.display = 'block';
+            indicator.style.animation = 'fadeIn 0.3s';
+        } else {
+            indicator.style.display = 'none';
+        }
+    }
+
+    updateChatStatus(status) {
+        const el = this.cache.chatStatus;
+        if (!el) return;
+        const isOnline = status === 'online';
+        el.innerHTML = isOnline ? '🟢 Online' : '⚪ Offline';
+        el.style.color = isOnline ? '#25d366' : '#667781';
+    }
+
+    updateChatList(chats, profiles = {}, unreadCounts = {}) {
+        const container = this.cache.chatList;
+        if (!container) return;
+
+        if (!chats || chats.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:40px 20px; color:#667781;">
+                    <div style="font-size:48px;">👋</div>
+                    <div>Hakuna chats</div>
+                    <div style="font-size:12px; margin-top:5px;">Anza mazungumzo mapya</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = chats.map(chat => {
+            const avatar = Helpers.getAvatar(chat);
+            const lastMsg = this.getLastMessage(chat);
+            const unread = unreadCounts[chat] || 0;
+            const status = profiles[chat] === 'online' ? '🟢' : '⚪';
+
+            return `
+                <div class="chat-item" onclick="App.openChat('${chat}')">
+                    <img src="${avatar}" class="avatar" alt="${chat}" loading="lazy">
+                    <div class="info">
+                        <div class="name">${chat} ${status}</div>
+                        <div class="last-msg">${lastMsg || 'Hakuna ujumbe'}</div>
+                    </div>
+                    ${unread ? `<span class="badge">${unread}</span>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    getLastMessage(chat) {
+        const key = CONFIG.STORAGE_PREFIX + 'chat_' + App.currentUser + '_' + chat;
+        const msgs = JSON.parse(localStorage.getItem(key)) || [];
+        if (msgs.length === 0) return null;
+        const last = msgs[msgs.length - 1];
+        const text = last.content || last.text || '';
+        return Helpers.truncate(text, 30);
+    }
+}
+
+// ============================================
+// 4. MESSAGE MANAGER
+// ============================================
+
+class MessageManager {
+    constructor(app) {
+        this.app = app;
+        this.ui = app.ui;
+    }
+
+    async send(text) {
+        if (!Validators.isNotEmpty(text)) return;
+        if (text.length > CONFIG.MAX_MESSAGE_LENGTH) {
+            this.ui.showToast('Ujumbe ni mrefu sana', 'error');
+            return;
+        }
+
+        const input = this.ui.cache.messageInput;
+        input.disabled = true;
+
+        const tempId = Helpers.generateId();
+        const message = {
+            id: tempId,
+            sender_id: this.app.currentUserId,
+            receiver_id: this.app.currentChatId,
+            content: text.trim(),
+            created_at: new Date().toISOString(),
+            read: false,
+            reactions: [],
+            type: 'text'
+        };
+
+        this.addToLocal(message);
+        this.ui.renderMessages(
+            this.getLocalMessages(),
+            this.app.currentUserId,
+            this.app.currentChat
+        );
+
+        try {
+            const { data, error } = await window.supabase
                 .from('messages')
-                .update({ read: true })
-                .eq('receiver_id', currentUserId)
-                .eq('sender_id', currentChatId);
-            
-            document.getElementById('messageInput').focus();
+                .insert([{
+                    sender_id: this.app.currentUserId,
+                    receiver_id: this.app.currentChatId,
+                    content: text.trim(),
+                    type: 'text'
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Replace temp message with real one
+            const key = CONFIG.STORAGE_PREFIX + 'chat_' + this.app.currentUser + '_' + this.app.currentChat;
+            const msgs = JSON.parse(localStorage.getItem(key)) || [];
+            const index = msgs.findIndex(m => m.id === tempId);
+            if (index !== -1) {
+                msgs[index] = { ...data, id: data.id };
+                localStorage.setItem(key, JSON.stringify(msgs));
+            }
+
+            this.ui.renderMessages(
+                this.getLocalMessages(),
+                this.app.currentUserId,
+                this.app.currentChat
+            );
+
+        } catch (error) {
+            console.error('Send error:', error);
+            this.ui.showToast('❌ Imeshindwa kutuma ujumbe', 'error');
+        } finally {
+            input.disabled = false;
+            input.focus();
         }
-        
-        function backToList() {
-            showChatList();
+    }
+
+    addToLocal(message) {
+        const key = CONFIG.STORAGE_PREFIX + 'chat_' + this.app.currentUser + '_' + this.app.currentChat;
+        const msgs = JSON.parse(localStorage.getItem(key)) || [];
+        msgs.push(message);
+        localStorage.setItem(key, JSON.stringify(msgs));
+
+        // Update chat list order
+        const chats = JSON.parse(localStorage.getItem(CONFIG.STORAGE_PREFIX + 'chats_' + this.app.currentUser)) || [];
+        if (!chats.includes(this.app.currentChat)) {
+            chats.unshift(this.app.currentChat);
+            localStorage.setItem(CONFIG.STORAGE_PREFIX + 'chats_' + this.app.currentUser, JSON.stringify(chats));
         }
+    }
+
+    getLocalMessages() {
+        const key = CONFIG.STORAGE_PREFIX + 'chat_' + this.app.currentUser + '_' + this.app.currentChat;
+        return JSON.parse(localStorage.getItem(key)) || [];
+    }
+
+    selectMessage(id) {
+        this.app.selectedMessageId = id;
+    }
+
+    showContextMenu(event, id) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.app.selectedMessageId = id;
+        const menu = this.ui.cache.contextMenu;
+        if (!menu) return;
+
+        menu.classList.add('active');
+        menu.style.left = Math.min(event.clientX, window.innerWidth - 200) + 'px';
+        menu.style.top = Math.min(event.clientY, window.innerHeight - 150) + 'px';
+    }
+
+    async deleteMessage() {
+        const id = this.app.selectedMessageId;
+        if (!id) return;
+        if (!confirm('Una uhakika unataka kufuta ujumbe huu?')) return;
+
+        try {
+            await window.supabase
+                .from('messages')
+                .delete()
+                .eq('id', id);
+
+            const key = CONFIG.STORAGE_PREFIX + 'chat_' + this.app.currentUser + '_' + this.app.currentChat;
+            let msgs = JSON.parse(localStorage.getItem(key)) || [];
+            msgs = msgs.filter(m => m.id !== id);
+            localStorage.setItem(key, JSON.stringify(msgs));
+
+            this.ui.renderMessages(
+                this.getLocalMessages(),
+                this.app.currentUserId,
+                this.app.currentChat
+            );
+            this.ui.showToast('Ujumbe umefutwa', 'success');
+        } catch (error) {
+            this.ui.showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    async addReaction(messageId, emoji) {
+        try {
+            const { data, error } = await window.supabase
+                .from('messages')
+                .select('reactions')
+                .eq('id', messageId)
+                .single();
+
+            if (error) throw error;
+
+            let reactions = data.reactions || [];
+            if (reactions.includes(emoji)) {
+                reactions = reactions.filter(r => r !== emoji);
+            } else {
+                reactions.push(emoji);
+            }
+
+            await window.supabase
+                .from('messages')
+                .update({ reactions })
+                .eq('id', messageId);
+
+            // Update local
+            const key = CONFIG.STORAGE_PREFIX + 'chat_' + this.app.currentUser + '_' + this.app.currentChat;
+            const msgs = JSON.parse(localStorage.getItem(key)) || [];
+            const msg = msgs.find(m => m.id === messageId);
+            if (msg) msg.reactions = reactions;
+            localStorage.setItem(key, JSON.stringify(msgs));
+
+            this.ui.renderMessages(
+                this.getLocalMessages(),
+                this.app.currentUserId,
+                this.app.currentChat
+            );
+        } catch (error) {
+            console.error('Reaction error:', error);
+        }
+    }
+
+    async handleTyping() {
+        if (this.app.typingTimeout) clearTimeout(this.app.typingTimeout);
         
-        // ============================================
-        // MESSAGES
-        // ============================================
-        
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            if(!text || !currentChatId) return;
-            
-            input.value = '';
-            input.disabled = true;
-            
-            const tempId = 'temp_' + Date.now();
-            const message = {
-                id: tempId,
-                sender_id: currentUserId,
-                receiver_id: currentChatId,
-                content: text,
-                created_at: new Date().toISOString(),
-                read: false,
-                reactions: [],
-                type: 'text'
-            };
-            
-            // Add locally
-            addMessageToLocal(message, true);
-            
+        if (this.app.currentChatId) {
             try {
-                const { data, error } = await supabase
-                    .from('messages')
-                    .insert([{
-                        sender_id: currentUserId,
-                        receiver_id: currentChatId,
-                        content: text,
-                        type: 'text'
-                    }])
-                    .select()
-                    .single();
-                
-                if(error) throw error;
-                
-                // Replace temp message
-                const key = 'chat_' + currentUser + '_' + currentChat;
+                await window.supabase
+                    .from('typing_status')
+                    .upsert({
+                        user_id: this.app.currentUserId,
+                        target_id: this.app.currentChatId,
+                        is_typing: true,
+                        updated_at: new Date().toISOString()
+                    });
+            } catch (e) { /* silent */ }
+        }
+
+        this.app.typingTimeout = setTimeout(() => {
+            if (this.app.currentChatId) {
+                window.supabase
+                    .from('typing_status')
+                    .upsert({
+                        user_id: this.app.currentUserId,
+                        target_id: this.app.currentChatId,
+                        is_typing: false,
+                        updated_at: new Date().toISOString()
+                    })
+                    .catch(() => {});
+            }
+        }, CONFIG.TYPING_TIMEOUT);
+    }
+}
+
+// ============================================
+// 5. REAL-TIME MANAGER
+// ============================================
+
+class RealtimeManager {
+    constructor(app) {
+        this.app = app;
+        this.ui = app.ui;
+        this.subscriptions = [];
+        this.setupChannel();
+        this.setupTypingChannel();
+        this.setupPresence();
+    }
+
+    setupChannel() {
+        const channel = window.supabase
+            .channel('messages-channel')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `receiver_id=eq.${this.app.currentUserId}`
+                },
+                (payload) => this.handleNewMessage(payload)
+            )
+            .subscribe();
+
+        this.subscriptions.push(channel);
+    }
+
+    setupTypingChannel() {
+        const channel = window.supabase
+            .channel('typing-channel')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'typing_status'
+                },
+                (payload) => this.handleTyping(payload)
+            )
+            .subscribe();
+
+        this.subscriptions.push(channel);
+    }
+
+    setupPresence() {
+        // Check online status every 30 seconds
+        setInterval(() => this.updatePresence(), 30000);
+        this.updatePresence();
+    }
+
+    async updatePresence() {
+        if (!this.app.currentUserId) return;
+        try {
+            await window.supabase
+                .from('profiles')
+                .update({
+                    status: 'online',
+                    last_seen: new Date().toISOString()
+                })
+                .eq('id', this.app.currentUserId);
+        } catch (e) { /* silent */ }
+    }
+
+    handleNewMessage(payload) {
+        const msg = payload.new;
+        if (msg.sender_id === this.app.currentUserId) return;
+
+        // Find chat user
+        this.app.databaseManager.getUserById(msg.sender_id).then(user => {
+            if (!user) return;
+
+            // If we're in this chat, add message
+            if (this.app.currentChatId === msg.sender_id) {
+                const key = CONFIG.STORAGE_PREFIX + 'chat_' + this.app.currentUser + '_' + user.username;
                 const msgs = JSON.parse(localStorage.getItem(key)) || [];
-                const index = msgs.findIndex(m => m.id === tempId);
-                if(index !== -1) {
-                    msgs[index] = {
+                msgs.push(msg);
+                localStorage.setItem(key, JSON.stringify(msgs));
+                this.ui.renderMessages(
+                    msgs,
+                    this.app.currentUserId,
+                    this.app.currentChat
+                );
+                this.ui.scrollToBottom();
+            }
+
+            // Update unread count
+            if (this.app.currentChatId !== msg.sender_id) {
+                this.app.unreadCounts[user.username] = (this.app.unreadCounts[user.username] || 0) + 1;
+            }
+
+            // Show notification
+            this.showNotification(user.username, msg.content);
+
+            // Update chat list
+            this.app.updateChatList();
+        });
+    }
+
+    handleTyping(payload) {
+        const data = payload.new;
+        if (data.user_id === this.app.currentUserId) return;
+        if (data.target_id !== this.app.currentUserId) return;
+
+        this.app.databaseManager.getUserById(data.user_id).then(user => {
+            if (user && data.is_typing) {
+                this.ui.showTyping(user.username, true);
+            } else {
+                this.ui.showTyping(null, false);
+            }
+        });
+    }
+
+    showNotification(username, message) {
+        if (document.hidden || !('Notification' in window) || Notification.permission !== 'granted') return;
+        
+        new Notification('💬 Ujumbe mpya', {
+            body: `${username}: ${Helpers.truncate(message, 50)}`,
+            icon: Helpers.getAvatar(username),
+            tag: username,
+            requireInteraction: true
+        });
+    }
+
+    cleanup() {
+        this.subscriptions.forEach(sub => sub.unsubscribe());
+        this.subscriptions = [];
+    }
+}
+
+// ============================================
+// 6. DATABASE MANAGER
+// ============================================
+
+class DatabaseManager {
+    constructor(app) {
+        this.app = app;
+    }
+
+    async getUserById(id) {
+        const { data, error } = await window.supabase
+            .from('profiles')
+            .select('username, status, avatar')
+            .eq('id', id)
+            .single();
+        
+        if (error) return null;
+        return data;
+    }
+
+    async getUserByUsername(username) {
+        const { data, error } = await window.supabase
+            .from('profiles')
+            .select('id, username, status, avatar')
+            .eq('username', username)
+            .single();
+        
+        if (error) return null;
+        return data;
+    }
+
+    async loadChatMessages(chatUserId) {
+        const { data, error } = await window.supabase
+            .from('messages')
+            .select('*')
+            .or(`sender_id.eq.${this.app.currentUserId},receiver_id.eq.${this.app.currentUserId}`)
+            .or(`sender_id.eq.${chatUserId},receiver_id.eq.${chatUserId}`)
+            .order('created_at', { ascending: true })
+            .limit(100);
+
+        if (error) {
+            console.error('Load messages error:', error);
+            return [];
+        }
+
+        return data || [];
+    }
+
+    async syncMessages(chatUsername) {
+        const user = await this.getUserByUsername(chatUsername);
+        if (!user) return [];
+
+        const msgs = await this.loadChatMessages(user.id);
+        if (msgs.length > 0) {
+            const key = CONFIG.STORAGE_PREFIX + 'chat_' + this.app.currentUser + '_' + chatUsername;
+            localStorage.setItem(key, JSON.stringify(msgs));
+        }
+        return msgs;
+    }
+
+    async getProfile(username) {
+        const { data, error } = await window.supabase
+            .from('profiles')
+            .select('*')
+            .eq('username', username)
+            .single();
+        
+        if (error) return null;
+        return data;
+    }
+
+    async updateProfile(username, updates) {
+        const { error } = await window.supabase
+            .from('profiles')
+            .update(updates)
+            .eq('username', username);
+        
+        if (error) throw error;
+    }
+
+    async getAllUsers() {
+        const { data, error } = await window.supabase
+            .from('profiles')
+            .select('username, status');
+        
+        if (error) return [];
+        return data || [];
+    }
+
+    async markMessagesAsRead(receiverId, senderId) {
+        const { error } = await window.supabase
+            .from('messages')
+            .update({ read: true })
+            .eq('receiver_id', receiverId)
+            .eq('sender_id', senderId);
+        
+        if (error) console.error('Mark read error:', error);
+    }
+
+    async clearChat(chatUsername) {
+        const user = await this.getUserByUsername(chatUsername);
+        if (!user) return;
+
+        const { error } = await window.supabase
+            .from('messages')
+            .delete()
+            .or(`and(sender_id.eq.${this.app.currentUserId},receiver_id.eq.${user.id})`)
+            .or(`and(sender_id.eq.${user.id},receiver_id.eq.${this.app.currentUserId})`);
+
+        if (error) throw error;
+
+        const key = CONFIG.STORAGE_PREFIX + 'chat_' + this.app.currentUser + '_' + chatUsername;
+        localStorage.removeItem(key);
+    }
+
+    async deleteAccount() {
+        const { error } = await window.supabase
+            .from('profiles')
+            .delete()
+            .eq('id', this.app.currentUserId);
+        
+        if (error) throw error;
+    }
+}
+
+// ============================================
+// 7. MAIN APP CLASS
+// ============================================
+
+class App {
+    constructor() {
+        this.currentUser = null;
+        this.currentUserId = null;
+        this.currentChat = null;
+        this.currentChatId = null;
+        this.selectedMessageId = null;
+        this.unreadCounts = {};
+        this.typingTimeout = null;
+        this.isDarkMode = false;
+        this.isInitialized = false;
+
+        // Initialize managers
+        this.ui = new UIManager();
+        this.databaseManager = new DatabaseManager(this);
+        this.messageManager = new MessageManager(this);
+        this.realtimeManager = new RealtimeManager(this);
+
+        this.setupGlobalEvents();
+        this.autoLogin();
+        this.setupTheme();
+        this.setupEmojiPicker();
+    }
+
+    setupGlobalEvents() {
+        // Custom event for sending messages
+        document.addEventListener('sendMessage', () => {
+            const input = this.ui.cache.messageInput;
+            if (input) this.messageManager.send(input.value);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                this.ui.cache.contextMenu?.classList.remove('active');
+                this.ui.cache.modal?.classList.remove('active');
+                this.ui.cache.emojiPicker?.classList.remove('active');
+            }
+            // Ctrl+Enter to send
+            if (e.key === 'Enter' && e.ctrlKey) {
+                const input = this.ui.cache.messageInput;
+                if (input) this.messageManager.send(input.value);
+            }
+        });
+    }
+
+    setupEmojiPicker() {
+        const picker = this.ui.cache.emojiPicker;
+        if (!picker) return;
+
+        const emojis = ['😀','😁','😂','🤣','😊','😍','🥰','😘','😗','😙','😚','☺️','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥','😮','🤐','😯','😪','😫','😴','😌','😛','😜','😝','🤤','😒','😓','😔','😕','🙃','🤑','😲','☹️','🙁','😖','😞','😟','😤','😢','😭','😦','😧','😨','😩','🤯','😬','😰','😱','🥵','🥶','😳','🤪','😵','😡','😠','🤬','👍','👎','👊','✊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✌️','🤟','🤘','👌','👈','👉','👆','👇','☝️','✋','🤚','🖐','🖖','👋','🤙','💪','🦾','🖕','✍️','🙇','💁','🙋','🧏','🙆','🙅','🤷','🤦','🙎','🙍','💇','💆','🧖','💅','🤳','💃','🕺','👯','🕴','🚶','🏃','🧎','🧍','👫','👭','👬','💑','👩‍❤️‍👨','👩‍❤️‍👩','💏','👨‍👩‍👦','👨‍👩‍👧','👨‍👩‍👧‍👦','👩‍👩‍👦','👩‍👩‍👧','👨‍👨‍👦','👨‍👨‍👧','👩‍👦','👩‍👧','👨‍👦','👨‍👧','🧑‍🤝‍🧑','👪','🧑‍🧑‍🧒','🧑‍🧑‍🧒‍🧒','👶','🧒','👦','👧','🧑','👨','👩','🧔','👱','👴','👵','🧓','👲','👳','🧕','👮','👷','💂','🕵️','🧑‍💼','👨‍💼','👩‍💼','🧑‍🔧','👨‍🔧','👩‍🔧','🧑‍🏭','👨‍🏭','👩‍🏭','🧑‍👨‍🎨','👩‍🎨','🧑‍🚀','👨‍🚀','👩‍🚀','🧑‍🚒','👨‍🚒','👩‍🚒','👮‍♀️','👮‍♂️','🕵️‍♀️','🕵️‍♂️','💂‍♀️','💂‍♂️','👷‍♀️','👷‍♂️','👳‍♀️','👳‍♂️','👲','🧕','👱‍♀️','👱‍♂️','🧔','🧔‍♂️','🧔‍♀️','👨‍🦰','👩‍🦰','👨‍🦱','👩‍🦱','👨‍🦳','👩‍🦳','👨‍🦲','👩‍🦲','👨‍👩‍👦','👨‍👩‍👧','👨‍👩‍👧‍👦','👩‍👩‍👦','👩‍👩‍👧','👨‍👨‍👦','👨‍👨‍👧','👩‍👦','👩‍👧','👨‍👦','👨‍👧','🧑‍🤝‍🧑','👪','🧑‍🧑‍🧒','🧑‍🧑‍🧒‍🧒'];
+
+        picker.innerHTML = emojis.map(e => 
+            `<span onclick="App.messageManager.send('${e}')" style="cursor:pointer;">${e}</span>`
+        ).join('');
+    }
+
+    setupTheme() {
+        this.isDarkMode = localStorage.getItem(CONFIG.STORAGE_PREFIX + 'darkMode') === 'true';
+        this.applyTheme();
+    }
+
+    applyTheme() {
+        document.body.classList.toggle('dark-mode', this.isDarkMode);
+        const toggle = this.ui.cache.darkModeToggle;
+        if (toggle) toggle.textContent = this.isDarkMode ? 'ON' : 'OFF';
+    }
+
+    toggleDarkMode() {
+        this.isDarkMode = !this.isDarkMode;
+        localStorage.setItem(CONFIG.STORAGE_PREFIX + 'darkMode', String(this.isDarkMode));
+        this.applyTheme();
+        this.ui.showToast(this.isDarkMode ? '🌙 Dark Mode ON' : '☀️ Light Mode ON', 'success');
+    }
+
+    autoLogin() {
+        const savedUser = localStorage.getItem(CONFIG.STORAGE_PREFIX + 'currentUser');
+        const savedId = localStorage.getItem(CONFIG.STORAGE_PREFIX + 'currentUserId');
+        if (savedUser && savedId) {
+            this.currentUser = savedUser;
+            this.currentUserId = savedId;
+            this.loadMyProfile();
+            this.showChatList();
+            this.setupRealtime();
+        } else {
+            this.ui.showScreen('loginScreen');
+        }
+        this.isInitialized = true;
+    }
+
+    loadMyProfile() {
+        const avatar = Helpers.getAvatar(this.currentUser);
+        this.ui.cache.myAvatar.src = avatar;
+        this.ui.cache.profilePreview.src = avatar;
+    }
+
+    async showChatList() {
+        this.ui.showScreen('chatListScreen');
+        await this.updateChatList();
+        await this.updateOnlineStatuses();
+    }
+
+    async updateChatList() {
+        const chats = JSON.parse(localStorage.getItem(CONFIG.STORAGE_PREFIX + 'chats_' + this.currentUser)) || [];
+        
+        // Ensure AI chat exists
+        if (!chats.includes('NICK AI')) {
+            chats.unshift('NICK AI');
+            localStorage.setItem(CONFIG.STORAGE_PREFIX + 'chats_' + this.currentUser, JSON.stringify(chats));
+        }
+
+        const profiles = await this.databaseManager.getAllUsers();
+        const statusMap = {};
+        profiles.forEach(p => statusMap[p.username] = p.status);
+
+        this.ui.updateChatList(chats, statusMap, this.unreadCounts);
+    }
+
+    async updateOnlineStatuses() {
+        // Update every 10 seconds
+        if (this._statusInterval) clearInterval(this._statusInterval);
+        this._statusInterval = setInterval(async () => {
+            await this.updateChatList();
+        }, 10000);
+    }
+
+    async setupRealtime() {
+        await Notification.requestPermission();
+        // Realtime already initialized in constructor
+    }
+
+    async openChat(username) {
+        if (username === 'NICK AI') {
+            window.open('https://nick-ai.onrender.com', '_blank');
+            return;
+        }
+
+        this.currentChat = username;
+        
+        const user = await this.databaseManager.getUserByUsername(username);
+        if (user) {
+            this.currentChatId = user.id;
+            this.ui.updateChatStatus(user.status);
+        }
+
+        this.ui.showScreen('chatScreen');
+        this.ui.cache.chatWith.textContent = username;
+        this.ui.cache.chatAvatar.src = Helpers.getAvatar(username);
+
+        // Clear unread
+        this.unreadCounts[username] = 0;
+
+        // Load messages
+        const msgs = await this.databaseManager.syncMessages(username);
+        this.ui.renderMessages(ms
